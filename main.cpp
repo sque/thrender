@@ -4,9 +4,6 @@
  *  Created on: Nov 30, 2012
  *      Author: sque
  */
-#include <assimp/Importer.hpp> // C++ importer interface
-#include <assimp/scene.h> // Output data structure
-#include <assimp/postprocess.h> // Post processing flags
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -18,9 +15,13 @@
 #include <iostream>
 #include <fstream>
 #include "perf_timer.hpp"
-#include "utils.hpp"
 #include <SDL/SDL.h>
 #include <math.h>
+#include "thrender/camera.hpp"
+#include "thrender/vertex_processor.hpp"
+#include "thrender/mesh.hpp"
+#include "thrender/gbuffer.hpp"
+#include "thrender/utils.hpp"
 
 #define PI	3.141593
 #define HPI	(PI / 2.0f)
@@ -33,152 +34,10 @@ SDL_Texture * tex_diffuse;
 SDL_Texture * tex_depth;
 
 
-struct gbuffer {
-	typedef thrust::host_vector<glm::vec4> diffuse;
-	typedef thrust::host_vector<glm::vec3> normal;
-	typedef thrust::host_vector<float> depth;
 
-	unsigned width;
-	unsigned height;
-
-	diffuse buf_diffuse;
-	normal buf_normal;
-	depth buf_depth;
-
-	diffuse clear_diffuse;
-	normal clear_normal;
-	depth clear_depth;
-
-	gbuffer(unsigned w, unsigned h) :
-		width(w),
-		height(h),
-		buf_diffuse(width * height),
-		buf_normal(width * height),
-		buf_depth(width * height),
-		clear_diffuse(buf_diffuse.size()),
-		clear_normal(buf_normal.size()),
-		clear_depth(buf_depth.size()){
-
-		set_clear_values(
-			glm::vec4(1.0f,1.0f,1.0f,1.0f),
-			glm::vec3(0.0f,0.0f,0.0f),
-			0);
-	}
-
-	void set_clear_values(const glm::vec4 & diff_value, const glm::vec3 & norm_value, float depth_value) {
-		set_clear_diffuse(diff_value);
-		thrust::fill(clear_normal.begin(), clear_normal.end(), norm_value);
-		thrust::fill(clear_depth.begin(), clear_depth.end(), depth_value);
-	}
-
-	void set_clear_diffuse(const glm::vec4 & diff_value) {
-		thrust::fill(clear_diffuse.begin(), clear_diffuse.end(), diff_value);
-	}
-	void clear() {
-		thrust::copy(clear_diffuse.begin(), clear_diffuse.end(), buf_diffuse.begin());
-		thrust::copy(clear_normal.begin(), clear_normal.end(), buf_normal.begin());
-		thrust::copy(clear_depth.begin(), clear_depth.end(), buf_depth.begin());
-	}
-};
 
 #define coord2d(x__,y__) (((y__) * 640) + (x__))
 
-
-
-struct camera {
-	glm::mat4 proj_mat;
-	glm::mat4 view_mat;
-	glm::vec3 position;
-
-	camera(glm::vec3 _pos, float fov, float aspect, float near, float far) :
-		position(_pos){
-		proj_mat = glm::perspective(fov, aspect, near, far);
-		view_mat = glm::lookAt(position, glm::vec3(0,0,0), glm::vec3(0,1,0));
-		//view_mat = glm::translate(view_mat, -position);
-	}
-} cam(glm::vec3(0,0, 10), 45, 4.0f/3.0f, 5, 200);
-
-struct mesh {
-	thrust::host_vector<glm::vec4> vertices;
-	thrust::host_vector<glm::vec4> colors;
-	thrust::host_vector<glm::vec4> normals;
-	thrust::host_vector<glm::ivec3> triangles;
-
-	size_t total_vertices;
-	glm::vec4 position;
-	glm::mat4 model_mat;
-
-
-	mesh() :
-		total_vertices(0),
-		position(0,0,0,1),
-		model_mat(1.0f){
-
-		model_mat = glm::rotate(glm::mat4(1.0f), -45.0f, glm::vec3(1,0,0));
-	}
-
-	void resize(size_t vectors_sz, size_t triangles_sz) {
-		total_vertices = vectors_sz;
-		vertices.resize(vectors_sz);
-		colors.resize(vectors_sz);
-		normals.resize(vectors_sz);
-		triangles.resize(triangles_sz);
-
-	}
-
-} tux;
-
-// Render booking
-struct booking {
-	thrust::host_vector<bool> discard_vertex;
-
-	float near = 1, far = 0;
-
-	void reset(size_t sz_vertices) {
-		discard_vertex.clear();
-		discard_vertex.resize(sz_vertices, false);
-	}
-};
-
-struct vertex_proc_kernel {
-
-	const glm::mat4 & mvp;
-	booking & book;
-
-	vertex_proc_kernel(const glm::mat4 & _mvp, booking & b) :
-		mvp(_mvp),
-		book(b){}
-
-	glm::vec4 operator()(const glm::vec4 & v, size_t index) {
-		glm::vec4 vn = mvp * v;
-		// clip coordinates
-		vn = vn / vn.w;
-		// normalized device coordinates
-		vn.x = (vn.x * 320) + 320;
-		vn.y = (vn.y * 240) + 240;
-		vn.z = (vn.z * (book.far - book.near)/2) + (book.far + book.near)/2;
-
-		// window space
-		if (vn.x >= 640 || vn.x < 0 || vn.y > 480 || vn.y < 0)
-			book.discard_vertex[index] = true;
-		return vn;
-	}
-};
-// Extract projected vertices
-thrust::host_vector<glm::vec4> vertex_proc(const mesh & m, const camera & c, booking & book) {
-	thrust::host_vector<glm::vec4> proj_vert(m.total_vertices);	// Projected vertices
-	book.reset(m.total_vertices);
-	glm::mat4 mvp_mat(1.0f);
-	mvp_mat = c.proj_mat * c.view_mat * m.model_mat;
-
-	thrust::transform(
-			m.vertices.begin(), m.vertices.end(),			// Input 1
-			thrust::counting_iterator<size_t>(0),			// Input 3
-			proj_vert.begin(),								// Output
-			vertex_proc_kernel(mvp_mat, book));				// Operation
-
-	return proj_vert;
-}
 
 struct face {
 	glm::vec3 v[3];
@@ -210,42 +69,57 @@ struct face {
 	}
 };
 
+
+
+struct triangle {
+
+	size_t indices[3];
+
+	struct {
+		bool discard;
+	} flags;
+
+	triangle(size_t iv1, size_t iv2, size_t iv3, bool _discard) {
+
+	};
+};
+
 struct primitives_kernel {
 
 	const thrust::host_vector<glm::vec4> & ws_vertices;
-	booking & book;
+	thrender::render_state & rstate;
 
-	primitives_kernel(const thrust::host_vector<glm::vec4> & v, booking & b) :
+	primitives_kernel(const thrust::host_vector<glm::vec4> & v, thrender::render_state & _rstate) :
 		ws_vertices(v),
-		book(b) {}
-	face operator()(const glm::ivec3 & tr, const mesh *m) {
+		rstate(_rstate) {}
+	face operator()(const glm::ivec3 & tr, const thrender::mesh *m) {
 		return face(
 			glm::vec3(ws_vertices[tr.x]),
 			glm::vec3(ws_vertices[tr.y]),
 			glm::vec3(ws_vertices[tr.z]),
-			book.discard_vertex[tr.x] || book.discard_vertex[tr.y] || book.discard_vertex[tr.z]
+			rstate.discard_vertex[tr.x] || rstate.discard_vertex[tr.y] || rstate.discard_vertex[tr.z]
 		);
 	}
 };
 
 // Extract primitives
-thrust::host_vector<face> primitives_proc(const mesh & m, const thrust::host_vector<glm::vec4> & ws_vertices, booking & book){
+thrust::host_vector<face> primitives_proc(const thrender::mesh & m, const thrust::host_vector<glm::vec4> & ws_vertices, thrender::render_state & rstate){
 	thrust::host_vector<face> prim_coords(m.triangles.size());
 	std::cout << "Triangles: " << m.triangles.size() << std::endl;
 	thrust::transform(
 			m.triangles.begin(), m.triangles.end(),
 			thrust::make_constant_iterator(&m),
 			prim_coords.begin(),
-			primitives_kernel(ws_vertices, book));
+			primitives_kernel(ws_vertices, rstate));
 	return prim_coords;
 }
 
 
 
 struct draw_pixel {
-	gbuffer & gbuf;
+	thrender::gbuffer & gbuf;
 
-	draw_pixel(gbuffer & _gbuf) : gbuf(_gbuf){}
+	draw_pixel(thrender::gbuffer & _gbuf) : gbuf(_gbuf){}
 
 	inline bool operator()(int x, int y) {
 		gbuf.buf_diffuse[coord2d(x,y)] = glm::vec4(1,0,0,1);
@@ -255,13 +129,13 @@ struct draw_pixel {
 };
 
 struct interpolate_draw_pixel {
-	gbuffer & gbuf;
+	thrender::gbuffer & gbuf;
 
 	const glm::vec3 & from, & to;
 	float sqlength;
 	float zdist;
 
-	interpolate_draw_pixel(gbuffer & _gbuf, const glm::vec3 & _from, const glm::vec3 & _to) :
+	interpolate_draw_pixel(thrender::gbuffer & _gbuf, const glm::vec3 & _from, const glm::vec3 & _to) :
 		gbuf(_gbuf),
 		from(_from),
 		to(_to),
@@ -377,11 +251,11 @@ struct mark_contour {
 
 struct raster_kernel {
 
-	gbuffer & gbuf;
+	thrender::gbuffer & gbuf;
 	draw_pixel draw_pixel_op;
 
 
-	raster_kernel(gbuffer & _gbuf) :
+	raster_kernel(thrender::gbuffer & _gbuf) :
 		gbuf(_gbuf),
 		draw_pixel_op(gbuf)	{
 	}
@@ -412,12 +286,14 @@ struct raster_kernel {
 		contour tri_contour;
 
 
-		line_bresenham(pord[0]->x, pord[0]->y, pord[1]->x, pord[1]->y, 0,
+		thrender::util::line_bresenham(pord[0]->x, pord[0]->y, pord[1]->x, pord[1]->y,
 				mark_contour(tri_contour));
-		line_bresenham(pord[1]->x, pord[1]->y, pord[2]->x, pord[2]->y, 0,
+		thrender::util::line_bresenham(pord[1]->x, pord[1]->y, pord[2]->x, pord[2]->y,
 				mark_contour(tri_contour));
-		line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x, pord[2]->y, 0,
+		thrender::util::line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x, pord[2]->y,
 				mark_contour(tri_contour));
+
+		// Fill triangle
 		interpolate_draw_pixel pix_op(gbuf, *pord[1],*pord[2]);
 		for(int y = pord[2]->y; y <= pord[0]->y; y++) {
 			for(int x  = tri_contour.left_limits[y]; x< tri_contour.right_limits[y];x++)
@@ -446,7 +322,7 @@ struct raster_kernel {
 };
 
 // Rasterization
-void raster_proc(const thrust::host_vector<face> & faces, gbuffer & gbuf) {
+void raster_proc(const thrust::host_vector<face> & faces, thrender::gbuffer & gbuf) {
 	thrust::for_each(
 			faces.begin(),
 			faces.end(),
@@ -454,7 +330,7 @@ void raster_proc(const thrust::host_vector<face> & faces, gbuffer & gbuf) {
 			);
 }
 
-void upload_image(gbuffer & gbuf){
+void upload_image(thrender::gbuffer & gbuf){
 
 	long src_index = 0;
 	Uint32 *dst_dif, * dst_depth;
@@ -504,15 +380,18 @@ void upload_image(gbuffer & gbuf){
 void render() {
 
 	timer tm;
-	gbuffer gbuff(640, 480);
+	thrender::gbuffer gbuff(640, 480);
 	gbuff.set_clear_diffuse(glm::vec4(0,0,0,1));
 	thrust::host_vector<face> faces;
-	booking book;
+	thrender::render_state rstate;
+	thrender::mesh tux = thrender::load_model("/home/sque/Downloads/cube.ply");
+
+	thrender::camera cam(glm::vec3(0,0, 10), 45, 4.0f/3.0f, 5, 200);
 
 	for(int i = 1; i < 15000;i++) {
 		tm.reset();
 		gbuff.clear();
-		faces = primitives_proc(tux, vertex_proc(tux, cam, book), book);
+		faces = primitives_proc(tux, thrender::process_vertices(tux, cam, rstate), rstate);
 		raster_proc(faces, gbuff);
 		timer::duration dt = tm.passed();
 		std::cout << "Frame took " << dt << std::endl;
@@ -536,44 +415,7 @@ void render() {
 	std::cout << "pixels written" << std::endl;
 }
 
-bool loadScene() {
-	 // Create an instance of the Importer class
-	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile( "/home/sque/Downloads/tux__.ply",
-			aiProcess_CalcTangentSpace |
-			aiProcess_Triangulate |
-			aiProcess_JoinIdenticalVertices |
-			aiProcess_SortByPType);
-	// If the import failed, report it
-	if( !scene)	{
-		std::cerr << importer.GetErrorString() << std::endl;
-		return false;
-	}
 
-	if ( scene->mNumMeshes != 1) {
-		std::cerr << "More than one model" << std::endl;
-		return false;
-	}
-
-	// Load TUX
-	const aiMesh * m = scene->mMeshes[0];
-	tux.resize(m->mNumVertices, m->mNumFaces);
-
-	for(unsigned i = 0;i < m->mNumVertices;i++){
-		tux.vertices[i] = glm::vec4(glm::make_vec3(&m->mVertices[i].x),1);
-		tux.normals[i] =  glm::vec4(glm::make_vec3(&m->mNormals[i].x),1);
-		//tux.colors[i] =  glm::make_vec4(&m->mColors[i]->r);
-	}
-
-	for(unsigned i = 0;i < m->mNumFaces;i++){
-			tux.triangles[i] = glm::ivec3(
-					m->mFaces[i].mIndices[0],
-					m->mFaces[i].mIndices[1],
-					m->mFaces[i].mIndices[2]
-					);
-		}
-	return true;
-}
 
 
 int main(){
@@ -606,9 +448,6 @@ int main(){
     	return 5;
     }
 
-	if (!loadScene()){
-		std::cerr << "Error loading scene" << std::endl;
-	}
 	std::cout << "Scene loaded" << std::endl;
 	render();
 	std::cout << "Scene rendered" << std::endl;
