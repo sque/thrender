@@ -32,6 +32,7 @@ namespace thrender {
 
 		boost::random::mt19937 rng;
 		boost::random::uniform_real_distribution<> one(0,1);
+
 		for(unsigned i = 0;i < m->mNumVertices;i++){
 			outm.attributes.positions[i] = glm::vec4(glm::make_vec3(&m->mVertices[i].x),1);
 			outm.attributes.normals[i] =  glm::vec4(glm::make_vec3(&m->mNormals[i].x),1);

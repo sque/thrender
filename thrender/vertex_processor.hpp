@@ -8,24 +8,12 @@
 
 namespace thrender {
 
-	struct vertex_attributes {
-		thrust::host_vector<glm::vec4> positions;
-		thrust::host_vector<glm::vec3> normals;
-		thrust::host_vector<glm::vec4> colors;
-
-		vertex_attributes(size_t sz) :
-			positions(sz),
-			normals(sz),
-			colors(sz){
-		}
-	};
-
-	struct vertex_processor_kernel {
+	struct vertex_shader {
 
 		const glm::mat4 & mvp;
 		render_state & rstate;
 
-		vertex_processor_kernel(const glm::mat4 & _mvp, render_state & _rstate) :
+		vertex_shader(const glm::mat4 & _mvp, render_state & _rstate) :
 			mvp(_mvp),
 			rstate(_rstate){}
 
@@ -64,7 +52,7 @@ namespace thrender {
 				m.attributes.positions.begin(), m.attributes.positions.end(),		// Input 1
 				thrust::counting_iterator<size_t>(0),			// Input 3
 				proj_vertices.begin(),							// Output
-				vertex_processor_kernel(mvp_mat, rstate));		// Operation
+				vertex_shader(mvp_mat, rstate));		// Operation
 
 		return proj_vertices;
 	}
