@@ -3,27 +3,22 @@
 #include "render_state.hpp"
 #include "camera.hpp"
 #include "mesh.hpp"
+#include "utils.hpp"
 #include <thrust/iterator/zip_iterator.h>
 
 namespace thrender {
-
 
 	struct vertex_attributes {
 		thrust::host_vector<glm::vec4> positions;
 		thrust::host_vector<glm::vec3> normals;
 		thrust::host_vector<glm::vec4> colors;
 
-
-
 		vertex_attributes(size_t sz) :
 			positions(sz),
 			normals(sz),
 			colors(sz){
 		}
-
-
 	};
-
 
 	struct vertex_processor_kernel {
 
@@ -55,19 +50,20 @@ namespace thrender {
 	};
 
 	// Process vertices and extract projected on window space
-	thrust::host_vector<glm::vec4> process_vertices(const mesh & m, const thrender::camera & cam, render_state & rstate) {
+	thrust::host_vector<glm::vec4> process_vertices(mesh & m, const thrender::camera & cam, render_state & rstate) {
 
 		// Projected vertices
-		thrust::host_vector<glm::vec4> proj_vertices(m.total_vertices);
+		thrust::host_vector<glm::vec4> proj_vertices(m.total_vertices());
 
-		rstate.reset(m.total_vertices);
+		rstate.reset(m.total_vertices());
 		glm::mat4 mvp_mat(1.0f);
 		mvp_mat = cam.proj_mat * cam.view_mat * m.model_mat;
 
+		// For all vertex attributes, process them
 		thrust::transform(
 				m.attributes.positions.begin(), m.attributes.positions.end(),		// Input 1
 				thrust::counting_iterator<size_t>(0),			// Input 3
-				proj_vertices.begin(),					// Output
+				proj_vertices.begin(),							// Output
 				vertex_processor_kernel(mvp_mat, rstate));		// Operation
 
 		return proj_vertices;

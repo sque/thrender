@@ -1,7 +1,9 @@
 #pragma once
+#include "mesh.hpp"
+#include <sstream>
 
 namespace thrender {
-namespace util {
+namespace utils {
 
 	template<class Functor>
 	double line_bresenham(int x1, int y1, int x2, int y2, Functor action)
@@ -9,7 +11,7 @@ namespace util {
 		int dx, dy, i, e;
 		int incx, incy, inc1, inc2;
 		int x, y;
-		double res;
+		double res = 0;
 
 		dx = x2 - x1;
 		dy = y2 - y1;
@@ -63,5 +65,29 @@ namespace util {
 			}
 		}
 		return 0;
+	}
+
+	std::string info(const glm::vec2 & v) {
+		std::stringstream ss;
+		ss << v.x << "," << v.y << std::endl;
+		return ss.str();
+	}
+
+	std::string info(const glm::vec3 & v) {
+		std::stringstream ss;
+		ss << v.x << ", " << v.y << ", " << v.z;
+		return ss.str();
+	}
+
+	std::string info(const glm::vec4 & v) {
+		std::stringstream ss;
+		ss << v.x << ", " << v.y << ", " << v.z << ", " << v.z;
+		return ss.str();
+	}
+
+	std::string info(const mesh & m) {
+		std::stringstream ss;
+		ss << "Mesh[Vertices: " << m.total_vertices() << ", Triangles:" << m.triangles.size() << "]";
+		return ss.str();
 	}
 }}

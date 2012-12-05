@@ -45,10 +45,6 @@ struct face {
 		bool discard;
 	} flags;
 
-	typedef glm::vec3 * iterator;
-
-	typedef const glm::vec3 * const_iterator;
-
 	face(const glm::vec3 & v0, const glm::vec3 & v1, const glm::vec3 & v2, bool _disc) {
 		v[0] = v0;
 		v[1] = v1;
@@ -84,15 +80,16 @@ struct triangle {
 	};
 };
 
-struct primitives_kernel {
+struct primitives_proc_kernel {
 
 	const thrust::host_vector<glm::vec4> & ws_vertices;
 	thrender::render_state & rstate;
 
-	primitives_kernel(const thrust::host_vector<glm::vec4> & v, thrender::render_state & _rstate) :
+	primitives_proc_kernel(const thrust::host_vector<glm::vec4> & v, thrender::render_state & _rstate) :
 		ws_vertices(v),
 		rstate(_rstate) {}
 	face operator()(const glm::ivec3 & tr, const thrender::mesh *m) {
+		//std::cout << "Triangle " << tr.x << " " <<  tr.y << " " << tr.z << std::endl;
 		return face(
 			glm::vec3(ws_vertices[tr.x]),
 			glm::vec3(ws_vertices[tr.y]),
@@ -103,15 +100,20 @@ struct primitives_kernel {
 };
 
 // Extract primitives
-thrust::host_vector<face> primitives_proc(const thrender::mesh & m, const thrust::host_vector<glm::vec4> & ws_vertices, thrender::render_state & rstate){
-	thrust::host_vector<face> prim_coords(m.triangles.size());
-	std::cout << "Triangles: " << m.triangles.size() << std::endl;
+thrust::host_vector<face> process_primitives(const thrender::mesh & m, const thrust::host_vector<glm::vec4> & proj_vertices, thrender::render_state & rstate){
+	thrust::host_vector<face> primitives(m.total_triangles());
+
+	/*thrust::host_vector<glm::vec4>::const_iterator it;
+	std::cout << thrender::utils::info(m) << std::endl;
+	for(it = ws_vertices.begin(); it != ws_vertices.end();it++) {
+		std::cout << thrender::utils::info(*it) << std::endl;
+	}*/
 	thrust::transform(
 			m.triangles.begin(), m.triangles.end(),
 			thrust::make_constant_iterator(&m),
-			prim_coords.begin(),
-			primitives_kernel(ws_vertices, rstate));
-	return prim_coords;
+			primitives.begin(),
+			primitives_proc_kernel(proj_vertices, rstate));
+	return primitives;
 }
 
 
@@ -286,11 +288,11 @@ struct raster_kernel {
 		contour tri_contour;
 
 
-		thrender::util::line_bresenham(pord[0]->x, pord[0]->y, pord[1]->x, pord[1]->y,
+		thrender::utils::line_bresenham(pord[0]->x, pord[0]->y, pord[1]->x, pord[1]->y,
 				mark_contour(tri_contour));
-		thrender::util::line_bresenham(pord[1]->x, pord[1]->y, pord[2]->x, pord[2]->y,
+		thrender::utils::line_bresenham(pord[1]->x, pord[1]->y, pord[2]->x, pord[2]->y,
 				mark_contour(tri_contour));
-		thrender::util::line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x, pord[2]->y,
+		thrender::utils::line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x, pord[2]->y,
 				mark_contour(tri_contour));
 
 		// Fill triangle
@@ -384,14 +386,14 @@ void render() {
 	gbuff.set_clear_diffuse(glm::vec4(0,0,0,1));
 	thrust::host_vector<face> faces;
 	thrender::render_state rstate;
-	thrender::mesh tux = thrender::load_model("/home/sque/Downloads/cube.ply");
+	thrender::mesh tux = thrender::load_model("/home/sque/Downloads/tux__.ply");
 
 	thrender::camera cam(glm::vec3(0,0, 10), 45, 4.0f/3.0f, 5, 200);
 
 	for(int i = 1; i < 15000;i++) {
 		tm.reset();
 		gbuff.clear();
-		faces = primitives_proc(tux, thrender::process_vertices(tux, cam, rstate), rstate);
+		faces = process_primitives(tux, thrender::process_vertices(tux, cam, rstate), rstate);
 		raster_proc(faces, gbuff);
 		timer::duration dt = tm.passed();
 		std::cout << "Frame took " << dt << std::endl;

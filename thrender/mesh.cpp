@@ -31,16 +31,17 @@ namespace thrender {
 
 		for(unsigned i = 0;i < m->mNumVertices;i++){
 			outm.attributes.positions[i] = glm::vec4(glm::make_vec3(&m->mVertices[i].x),1);
-			outm.attributes.positions[i] =  glm::vec4(glm::make_vec3(&m->mNormals[i].x),1);
-			//tux.colors[i] =  glm::make_vec4(&m->mColors[i]->r);
+			outm.attributes.normals[i] =  glm::vec4(glm::make_vec3(&m->mNormals[i].x),1);
+			if (m->HasVertexColors(0))
+				outm.attributes.colors[i] = glm::make_vec4(&m->mColors[i]->r);
 		}
 
 		for(unsigned i = 0;i < m->mNumFaces;i++){
 			outm.triangles[i] = glm::ivec3(
-						m->mFaces[i].mIndices[0],
-						m->mFaces[i].mIndices[1],
-						m->mFaces[i].mIndices[2]
-						);
+				m->mFaces[i].mIndices[0],
+				m->mFaces[i].mIndices[1],
+				m->mFaces[i].mIndices[2]
+				);
 			}
 		return outm;
 	}

@@ -15,7 +15,6 @@ namespace thrender {
 		typedef thrust::host_vector<glm::vec4> normals_container;
 		typedef thrust::host_vector<glm::vec4> colors_container;
 
-
 		typedef positions_container::iterator positions_iterator;
 		typedef normals_container::iterator normals_iterator;
 		typedef colors_container::iterator colors_iterator;
@@ -40,19 +39,13 @@ namespace thrender {
 			}
 		} attributes;
 
-
-
-
 		// Triangle indices
 		thrust::host_vector<glm::ivec3> triangles;
 
-		size_t total_vertices;
 		glm::vec4 position;
 		glm::mat4 model_mat;
 
-
 		mesh() :
-			total_vertices(0),
 			position(0,0,0,1),
 			model_mat(1.0f){
 
@@ -60,17 +53,19 @@ namespace thrender {
 		}
 
 		void resize(size_t vectors_sz, size_t triangles_sz) {
-			total_vertices = vectors_sz;
 			attributes.positions.resize(vectors_sz);
 			attributes.colors.resize(vectors_sz);
 			attributes.normals.resize(vectors_sz);
 			triangles.resize(triangles_sz);
-
 		}
 
+		size_t total_vertices() const{
+			return attributes.positions.size();
+		}
 
-
-
+		size_t total_triangles() const {
+			return triangles.size();
+		}
 
 	};
 

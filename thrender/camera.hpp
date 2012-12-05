@@ -5,7 +5,8 @@
 
 namespace thrender {
 
-struct camera {
+	//! Camera representation object
+	struct camera {
 		glm::mat4 proj_mat;
 		glm::mat4 view_mat;
 		glm::vec3 position;
