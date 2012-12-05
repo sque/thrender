@@ -22,6 +22,7 @@
 #include "thrender/mesh.hpp"
 #include "thrender/gbuffer.hpp"
 #include "thrender/utils.hpp"
+#include "thrender/math.hpp"
 
 #define PI	3.141593
 #define HPI	(PI / 2.0f)
@@ -33,11 +34,7 @@ SDL_Renderer * renderer;
 SDL_Texture * tex_diffuse;
 SDL_Texture * tex_depth;
 
-
-
-
 #define coord2d(x__,y__) (((y__) * 640) + (x__))
-
 
 struct face {
 	glm::vec3 v[3];
@@ -45,13 +42,15 @@ struct face {
 		bool discard;
 	} flags;
 
-	face(const glm::vec3 & v0, const glm::vec3 & v1, const glm::vec3 & v2, bool _disc) {
+	face(const glm::vec3 & v0, const glm::vec3 & v1, const glm::vec3 & v2,
+			bool _disc) {
 		v[0] = v0;
 		v[1] = v1;
 		v[2] = v2;
 		flags.discard = _disc || !ccw_winding_order();
 	}
-	face(){}
+	face() {
+	}
 
 	bool ccw_winding_order() {
 		float adiff = atan2f(v[1].y - v[0].y, v[1].x - v[0].x)
@@ -65,66 +64,88 @@ struct face {
 	}
 };
 
-
-
+// Triangle primitive
 struct triangle {
 
 	size_t indices[3];
+
+	glm::vec4 v[3];
+	const thrust::host_vector<glm::vec4> (*proj_vertices);
+	const thrender::mesh * m;
 
 	struct {
 		bool discard;
 	} flags;
 
-	triangle(size_t iv1, size_t iv2, size_t iv3, bool _discard) {
+	triangle(const thrender::mesh & _m,
+			const thrust::host_vector<glm::vec4> & _proj_vertices, size_t iv0,
+			size_t iv1, size_t iv2, bool _discard) :
+			proj_vertices(&_proj_vertices), m(&_m) {
+		indices[0] = iv0;
+		indices[1] = iv1;
+		indices[2] = iv2;
+		v[0] = (*proj_vertices)[iv0];
+		v[1] = (*proj_vertices)[iv1];
+		v[2] = (*proj_vertices)[iv2];
+		flags.discard = _discard || !ccw_winding_order();
+	}
+	;
 
-	};
+	triangle() {
+	}
+
+	//! Check if triangle has Counter-Clock-Wise winding order
+	bool ccw_winding_order() {
+		float adiff = atan2f(v[1].y - v[0].y, v[1].x - v[0].x)
+				- atan2f(v[2].y - v[0].y, v[2].x - v[0].x);
+		if (adiff < 0)
+			adiff = PI2 + adiff;
+		if (adiff < PI) {
+			return false;
+		}
+		return true;
+	}
 };
 
 struct primitives_proc_kernel {
 
+	const thrender::mesh & m;
 	const thrust::host_vector<glm::vec4> & ws_vertices;
 	thrender::render_state & rstate;
 
-	primitives_proc_kernel(const thrust::host_vector<glm::vec4> & v, thrender::render_state & _rstate) :
-		ws_vertices(v),
-		rstate(_rstate) {}
-	face operator()(const glm::ivec3 & tr, const thrender::mesh *m) {
-		//std::cout << "Triangle " << tr.x << " " <<  tr.y << " " << tr.z << std::endl;
-		return face(
-			glm::vec3(ws_vertices[tr.x]),
-			glm::vec3(ws_vertices[tr.y]),
-			glm::vec3(ws_vertices[tr.z]),
-			rstate.discard_vertex[tr.x] || rstate.discard_vertex[tr.y] || rstate.discard_vertex[tr.z]
-		);
+	primitives_proc_kernel(const thrust::host_vector<glm::vec4> & v,
+			const thrender::mesh & _m, thrender::render_state & _rstate) :
+			m(_m), ws_vertices(v), rstate(_rstate) {
+	}
+
+	triangle operator()(const glm::ivec3 & tr) {
+		return triangle(m, ws_vertices, tr.x, tr.y, tr.z,
+				rstate.discard_vertex[tr.x] || rstate.discard_vertex[tr.y]
+						|| rstate.discard_vertex[tr.z]);
 	}
 };
 
 // Extract primitives
-thrust::host_vector<face> process_primitives(const thrender::mesh & m, const thrust::host_vector<glm::vec4> & proj_vertices, thrender::render_state & rstate){
-	thrust::host_vector<face> primitives(m.total_triangles());
+thrust::host_vector<triangle> process_primitives(const thrender::mesh & m,
+		const thrust::host_vector<glm::vec4> & proj_vertices,
+		thrender::render_state & rstate) {
+	thrust::host_vector<triangle> primitives(m.total_triangles());
 
-	/*thrust::host_vector<glm::vec4>::const_iterator it;
-	std::cout << thrender::utils::info(m) << std::endl;
-	for(it = ws_vertices.begin(); it != ws_vertices.end();it++) {
-		std::cout << thrender::utils::info(*it) << std::endl;
-	}*/
-	thrust::transform(
-			m.triangles.begin(), m.triangles.end(),
-			thrust::make_constant_iterator(&m),
+	thrust::transform(m.triangles.begin(), m.triangles.end(),
 			primitives.begin(),
-			primitives_proc_kernel(proj_vertices, rstate));
+			primitives_proc_kernel(proj_vertices, m, rstate));
 	return primitives;
 }
-
-
 
 struct draw_pixel {
 	thrender::gbuffer & gbuf;
 
-	draw_pixel(thrender::gbuffer & _gbuf) : gbuf(_gbuf){}
+	draw_pixel(thrender::gbuffer & _gbuf) :
+			gbuf(_gbuf) {
+	}
 
 	inline bool operator()(int x, int y) {
-		gbuf.buf_diffuse[coord2d(x,y)] = glm::vec4(1,0,0,1);
+		gbuf.diffuse[coord2d(x,y)] = glm::vec4(1, 0, 0, 1);
 
 		return true;
 	}
@@ -133,35 +154,32 @@ struct draw_pixel {
 struct interpolate_draw_pixel {
 	thrender::gbuffer & gbuf;
 
-	const glm::vec3 & from, & to;
+	const glm::vec4 & from, &to;
 	float sqlength;
 	float zdist;
 
-	interpolate_draw_pixel(thrender::gbuffer & _gbuf, const glm::vec3 & _from, const glm::vec3 & _to) :
-		gbuf(_gbuf),
-		from(_from),
-		to(_to),
-		zdist(from.z - to.z)
-	{
+	interpolate_draw_pixel(thrender::gbuffer & _gbuf, const glm::vec4 & _from,
+			const glm::vec4 & _to) :
+			gbuf(_gbuf), from(_from), to(_to), zdist(from.z - to.z) {
 		//sqlength = glm::length(to-from);
-		sqlength = pow(to.x-from.x,2) + pow(to.y-from.y,2);
+		sqlength = pow(to.x - from.x, 2) + pow(to.y - from.y, 2);
 	}
 
 	inline bool operator()(int x, int y) {
 		size_t coords = coord2d(x,y);
-		float factor,z;
+		float factor, z;
 		if (!sqlength) {
-			z= from.z;
+			z = from.z;
 		} else {
-			float sqdist = pow(x-from.x,2) + pow(y-from.y,2);
-			factor = sqdist/sqlength;
-			z = (zdist)*factor + from.z;
+			float sqdist = pow(x - from.x, 2) + pow(y - from.y, 2);
+			factor = sqdist / sqlength;
+			z = (zdist) * factor + from.z;
 		}
-		if (gbuf.buf_depth[coords] > z)	// Z-test
+		if (gbuf.depth[coords] > z)	// Z-test
 			return true;
 
-		gbuf.buf_depth[coords] = z;
-		gbuf.buf_diffuse[coords] = glm::vec4(1,0,0,1);
+		gbuf.depth[coords] = z;
+		gbuf.diffuse[coords] = glm::vec4(1, 0, 0, 1);
 		//gbuf.buf_normal[coords] =
 		return true;
 	}
@@ -175,13 +193,10 @@ struct edge {
 	const glm::vec3 & p2;
 
 	edge(const glm::vec3 & _p1, const glm::vec3 & _p2) :
-		vertical(false),
-		p1(_p1),
-		p2(_p2){
-
+			vertical(false), p1(_p1), p2(_p2) {
 
 		if (p2.x - p1.x)
-			slope = (p2.y - p1.y)/(p2.x - p1.x);
+			slope = (p2.y - p1.y) / (p2.x - p1.x);
 		else {
 
 			vertical = false;
@@ -197,7 +212,7 @@ struct edge {
 	}
 };
 
-template <class PixelOperation>
+template<class PixelOperation>
 struct walk_scan_line {
 
 	const glm::vec3 ** points;
@@ -207,46 +222,86 @@ struct walk_scan_line {
 	edge e01, e02, e21;
 
 	walk_scan_line(PixelOperation _op, const glm::vec3 * _points[]) :
-		points(_points),
-		pixel_op(_op),
-		e01(*points[0], *points[1]),
-		e02(*points[0], *points[2]),
-		e21(*points[2], *points[1]){
+			points(_points), pixel_op(_op), e01(*points[0], *points[1]), e02(
+					*points[0], *points[2]), e21(*points[2], *points[1]) {
 	}
 
 	bool operator()(int x, int y) {
 		if (y <= points[2]->y) {
-			for(int xw = x; e02.check_point_leftof(xw,y) ; xw++)
-				pixel_op(xw,y);
+			for (int xw = x; e02.check_point_leftof(xw, y); xw++)
+				pixel_op(xw, y);
 		}
 		return true;
 	}
 };
 
-struct contour {
-	int left_limits[480];
-	int right_limits[480];
+struct triangle_interpolate_draw_pixel {
 
-	contour() {
-		for(int i = 0;i < 480;i++) {
-			left_limits[i] = 10000;
-			right_limits[i] = 0;
+	thrender::gbuffer & gbuf;
+	const triangle & tri;
+
+	triangle_interpolate_draw_pixel(thrender::gbuffer & _gbuf,
+			const triangle & _tri) :
+			gbuf(_gbuf), tri(_tri) {
+		//sqlength = glm::length(to-from);
+		//sqlength = pow(to.x-from.x,2) + pow(to.y-from.y,2);
+	}
+
+	inline bool operator()(int x, int y) {
+		size_t coords = coord2d(x,y);
+		float z;
+
+		glm::vec4 lamdas = thrender::math::barycoords(tri.v[0], tri.v[1], tri.v[2], glm::vec2(x,y));
+
+		z = lamdas.x * tri.v[0].z + lamdas.y * tri.v[1].z + lamdas.z * tri.v[2].z;
+		glm::vec4 color =
+				tri.m->attributes.colors[tri.indices[0]] * lamdas.x+
+				tri.m->attributes.colors[tri.indices[1]] * lamdas.y+
+				tri.m->attributes.colors[tri.indices[2]] * lamdas.z;
+		glm::vec4 normal =
+				tri.m->attributes.normals[tri.indices[0]] * lamdas.x+
+				tri.m->attributes.normals[tri.indices[1]] * lamdas.y+
+				tri.m->attributes.normals[tri.indices[2]] * lamdas.z;
+
+		if (gbuf.depth[coords] > z)	// Z-test
+			return true;
+
+		gbuf.depth[coords] = z;
+		gbuf.diffuse[coords] = color;
+		gbuf.normal[coords] = normal;
+		return true;
+	}
+};
+
+//! Structure to hold (convex) polygon horizontal limits
+struct poly_hor_limits {
+
+	int leftmost[480];
+
+	int rightmost[480];
+
+	poly_hor_limits() {
+		for (int i = 0; i < 480; i++) {
+			leftmost[i] = 10000;
+			rightmost[i] = 0;
 		}
 	}
 };
-struct mark_contour {
 
-	contour & cont;
+//! Kernel to find poly vertical contour
+struct mark_vert_contour {
 
-	mark_contour(contour & _cont):
-		cont(_cont){
+	poly_hor_limits & limits;
+
+	mark_vert_contour(poly_hor_limits & _limits) :
+			limits(_limits) {
 	}
 
 	bool operator()(int x, int y) {
-		if (x < cont.left_limits[y])
-			cont.left_limits[y] = x;
-		if (x > cont.right_limits[y])
-			cont.right_limits[y] = x;
+		if (x < limits.leftmost[y])
+			limits.leftmost[y] = x;
+		if (x > limits.rightmost[y])
+			limits.rightmost[y] = x;
 		return true;
 	}
 };
@@ -256,126 +311,101 @@ struct raster_kernel {
 	thrender::gbuffer & gbuf;
 	draw_pixel draw_pixel_op;
 
-
 	raster_kernel(thrender::gbuffer & _gbuf) :
-		gbuf(_gbuf),
-		draw_pixel_op(gbuf)	{
+			gbuf(_gbuf), draw_pixel_op(gbuf) {
 	}
 
-	void operator()(const face & f) {
+	void operator()(const triangle & f) {
 		if (f.flags.discard)
 			return;
 
 		// Sort points by y
-		const glm::vec3 * pord[3] = { f.v, f.v+1, f.v+2 };
-		for(int i = 0;i < 3;i++) {
+		const glm::vec4 * pord[3] = { f.v, f.v + 1, f.v + 2 };
+		for (int i = 0; i < 3; i++) {
 			if (f.v[i].y > pord[0]->y) {
-				pord[0] = f.v+i;
+				pord[0] = f.v + i;
 			} else if (f.v[i].y < pord[2]->y) {
-				pord[2] = f.v+i;
+				pord[2] = f.v + i;
 			}
 		}
 
-		for(int i = 0;i< 3;i++)
-			if ((pord[0] != f.v+i) && (pord[2] != f.v+i)) {
-				pord[1] = f.v+i;
+		for (int i = 0; i < 3; i++)
+			if ((pord[0] != f.v + i) && (pord[2] != f.v + i)) {
+				pord[1] = f.v + i;
 				break;
 			}
 
-/*		if (pord[2]->y < pord[1]->x)
-			std::swap(pord[1], pord[2]);*/
+		// Find triangle contour
+		poly_hor_limits tri_contour;
+		mark_vert_contour mark_contour_op(tri_contour);
+		thrender::utils::line_bresenham(pord[0]->x, pord[0]->y, pord[1]->x,
+				pord[1]->y, mark_contour_op);
+		thrender::utils::line_bresenham(pord[1]->x, pord[1]->y, pord[2]->x,
+				pord[2]->y, mark_contour_op);
+		thrender::utils::line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x,
+				pord[2]->y, mark_contour_op);
 
-		contour tri_contour;
-
-
-		thrender::utils::line_bresenham(pord[0]->x, pord[0]->y, pord[1]->x, pord[1]->y,
-				mark_contour(tri_contour));
-		thrender::utils::line_bresenham(pord[1]->x, pord[1]->y, pord[2]->x, pord[2]->y,
-				mark_contour(tri_contour));
-		thrender::utils::line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x, pord[2]->y,
-				mark_contour(tri_contour));
-
-		// Fill triangle
-		interpolate_draw_pixel pix_op(gbuf, *pord[1],*pord[2]);
-		for(int y = pord[2]->y; y <= pord[0]->y; y++) {
-			for(int x  = tri_contour.left_limits[y]; x< tri_contour.right_limits[y];x++)
-				pix_op(x,y);
+		// Scan conversion fill
+		triangle_interpolate_draw_pixel pix_op(gbuf, f);
+		for (int y = pord[2]->y; y <= pord[0]->y; y++) {
+			for (int x = tri_contour.leftmost[y]; x < tri_contour.rightmost[y];
+					x++)
+				pix_op(x, y);
 		}
-/*		line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x, pord[2]->y, 0,
-			interpolate_draw_pixel(gbuf, *pord[0],*pord[2]));
-		line_bresenham(pord[1]->x, pord[1]->y, pord[2]->x, pord[2]->y, 0,
-					interpolate_draw_pixel(gbuf, *pord[1],*pord[2]));
-
-		//line_bresenham(pord[0]->x, pord[0]->y, pord[1]->x, pord[1]->y, 0,
-				//walk_scan_line<(interpolate_draw_pixel(gbuf, *pord[0],*pord[1]),pord));
-		line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x, pord[2]->y, 0,
-			interpolate_draw_pixel(gbuf, *pord[0],*pord[2]));
-		line_bresenham(pord[1]->x, pord[1]->y, pord[2]->x, pord[2]->y, 0,
-					interpolate_draw_pixel(gbuf, *pord[1],*pord[2]));
-*/
-
-/*		line_bresenham(f.v[0].x, f.v[0].y, f.v[1].x, f.v[1].y, 0,
-				interpolate_draw_pixel(gbuf, f.v[0], f.v[1]));
-		line_bresenham(f.v[0].x, f.v[0].y, f.v[2].x, f.v[2].y, 0,
-				interpolate_draw_pixel(gbuf, f.v[0], f.v[2]));
-		line_bresenham(f.v[2].x, f.v[2].y, f.v[1].x, f.v[1].y, 0,
-				interpolate_draw_pixel(gbuf, f.v[2], f.v[1]))*/;
 	}
 };
 
 // Rasterization
-void raster_proc(const thrust::host_vector<face> & faces, thrender::gbuffer & gbuf) {
-	thrust::for_each(
-			faces.begin(),
-			faces.end(),
-			raster_kernel(gbuf)
-			);
+void raster_proc(const thrust::host_vector<triangle> & triangles,
+		thrender::gbuffer & gbuf) {
+	thrust::for_each(triangles.begin(), triangles.end(), raster_kernel(gbuf));
 }
 
-void upload_image(thrender::gbuffer & gbuf){
+void upload_images(thrender::gbuffer & gbuf) {
 
 	long src_index = 0;
-	Uint32 *dst_dif, * dst_depth;
+	Uint32 *dst_dif, *dst_depth;
 	int row, col;
-    void *pixels_dif;
-    void *pixels_depth;
-    int pitch_dif, pitch_depth;
-    SDL_Rect dstrect;
+	void *pixels_dif;
+	void *pixels_depth;
+	int pitch_dif, pitch_depth;
+	SDL_Rect dstrect;
 
-    if (SDL_LockTexture(tex_diffuse, NULL, &pixels_dif, &pitch_dif) < 0) {
-    	std::cerr << "Couldn't lock texture:" << SDL_GetError() << std::endl;
-    	return;
-    }
-    if (SDL_LockTexture(tex_depth, NULL, &pixels_depth, &pitch_depth) < 0) {
-        	std::cerr << "Couldn't lock texture:" << SDL_GetError() << std::endl;
-        	return;
-        }
+	if (SDL_LockTexture(tex_diffuse, NULL, &pixels_dif, &pitch_dif) < 0) {
+		std::cerr << "Couldn't lock texture:" << SDL_GetError() << std::endl;
+		return;
+	}
+	if (SDL_LockTexture(tex_depth, NULL, &pixels_depth, &pitch_depth) < 0) {
+		std::cerr << "Couldn't lock texture:" << SDL_GetError() << std::endl;
+		return;
+	}
 
-    for (row = 0; row < 480; ++row) {
-    	dst_dif = (Uint32*)((Uint8*)pixels_dif + row * pitch_dif);
-    	dst_depth = (Uint32*)((Uint8*)pixels_depth + row * pitch_depth);
+	for (row = 0; row < 480; ++row) {
+		dst_dif = (Uint32*) ((Uint8*) pixels_dif + row * pitch_dif);
+		dst_depth = (Uint32*) ((Uint8*) pixels_depth + row * pitch_depth);
 
-    	for (col = 0; col < 640; ++col) {
-    		glm::vec4 color = gbuf.buf_diffuse[src_index++] * 255.0f;
-    		float d = gbuf.buf_depth[src_index] * 255.0f;
-    		//*dst++ = (0xFF000000|(color.r << 16)|(color.g << 8) | color.b);
-    		*dst_dif++ = (0xFF000000|((int)color.r << 16)|((int)color.g << 8) | (int)color.b);
-    		*dst_depth++ = (((int)d << 16)|((int)d << 8) | (int)d);
+		for (col = 0; col < 640; ++col) {
+			glm::vec4 color = gbuf.diffuse[src_index++] * 255.0f;
+			float d = gbuf.depth[src_index] * 255.0f;
+			//*dst++ = (0xFF000000|(color.r << 16)|(color.g << 8) | color.b);
+			*dst_dif++ = (0xFF000000 | ((int) color.r << 16)
+					| ((int) color.g << 8) | (int) color.b);
+			*dst_depth++ = (((int) d << 16) | ((int) d << 8) | (int) d);
 
-    	}
-    }
+		}
+	}
 
-    SDL_UnlockTexture(tex_depth);
-    SDL_UnlockTexture(tex_diffuse);
-    SDL_RenderClear(renderer);
-    dstrect.h = 480;
-    dstrect.w = 640;
-    dstrect.x = 0;
-    dstrect.y = 0;
-    SDL_RenderCopy(renderer, tex_diffuse, NULL, &dstrect);
-    dstrect.x = 640;
-    SDL_RenderCopy(renderer, tex_depth, NULL, &dstrect);
-    SDL_RenderPresent(renderer);
+	SDL_UnlockTexture(tex_depth);
+	SDL_UnlockTexture(tex_diffuse);
+	SDL_RenderClear(renderer);
+	dstrect.h = 480;
+	dstrect.w = 640;
+	dstrect.x = 0;
+	dstrect.y = 0;
+	SDL_RenderCopy(renderer, tex_diffuse, NULL, &dstrect);
+	dstrect.x = 640;
+	SDL_RenderCopy(renderer, tex_depth, NULL, &dstrect);
+	SDL_RenderPresent(renderer);
 
 }
 
@@ -383,72 +413,74 @@ void render() {
 
 	timer tm;
 	thrender::gbuffer gbuff(640, 480);
-	gbuff.set_clear_diffuse(glm::vec4(0,0,0,1));
-	thrust::host_vector<face> faces;
+	gbuff.set_clear_diffuse(glm::vec4(0, 0, 0, 1));
+	thrust::host_vector<triangle> triangles;
 	thrender::render_state rstate;
-	thrender::mesh tux = thrender::load_model("/home/sque/Downloads/tux__.ply");
+	thrender::mesh tux = thrender::load_model("/home/sque/Downloads/cube.ply");
 
-	thrender::camera cam(glm::vec3(0,0, 10), 45, 4.0f/3.0f, 5, 200);
+	thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
 
-	for(int i = 1; i < 15000;i++) {
+	for (int i = 1; i < 15000; i++) {
 		tm.reset();
 		gbuff.clear();
-		faces = process_primitives(tux, thrender::process_vertices(tux, cam, rstate), rstate);
-		raster_proc(faces, gbuff);
+		triangles = process_primitives(tux,
+				thrender::process_vertices(tux, cam, rstate), rstate);
+		raster_proc(triangles, gbuff);
 		timer::duration dt = tm.passed();
 		std::cout << "Frame took " << dt << std::endl;
-		upload_image(gbuff);
+		upload_images(gbuff);
 
-		tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0,1,0));
+		tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
 		//cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,0));
 	}
-	thrust::host_vector<face>::iterator it;
+	thrust::host_vector<triangle>::iterator it;
 
 	std::ofstream myfile;
-	myfile.open ("pixels.txt");
-	for(it = faces.begin();it != faces.end();it++) {
-		face & f = *it;
-		for(int i = 0; i < 3;i++){
-			myfile << f.v[i].x << "," << f.v[i].y << "," << f.v[i].z << std::endl;
+	myfile.open("pixels.txt");
+	for (it = triangles.begin(); it != triangles.end(); it++) {
+		triangle & f = *it;
+		for (int i = 0; i < 3; i++) {
+			myfile << f.v[i].x << "," << f.v[i].y << "," << f.v[i].z
+					<< std::endl;
 		}
 	}
 	myfile.close();
-	while(1){}
+	while (1) {
+	}
 	std::cout << "pixels written" << std::endl;
 }
 
-
-
-
-int main(){
-	if ( SDL_Init(SDL_INIT_AUDIO|SDL_INIT_VIDEO) < 0 ) {
+int main() {
+	if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO) < 0) {
 		std::cerr << "Unable to init SDL:" << SDL_GetError() << std::endl;
 		return 1;
 	}
 
-	window = SDL_CreateWindow("Thrust Renderer",
-			SDL_WINDOWPOS_UNDEFINED,
-			SDL_WINDOWPOS_UNDEFINED,
-			640*2, 480,
-			SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE
-	);
+	window = SDL_CreateWindow("Thrust Renderer", SDL_WINDOWPOS_UNDEFINED,
+			SDL_WINDOWPOS_UNDEFINED, 640 * 2, 480,
+			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
-    renderer = SDL_CreateRenderer(window, -1, 0);
-    if (!renderer) {
-    	std::cerr << "Couldn't set create renderer:" << SDL_GetError() << std::endl;
-    }
+	renderer = SDL_CreateRenderer(window, -1, 0);
+	if (!renderer) {
+		std::cerr << "Couldn't set create renderer:" << SDL_GetError()
+				<< std::endl;
+	}
 
-    tex_diffuse = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 640,480);
-    if (!tex_diffuse) {
-    	std::cerr <<  "Couldn't set create texture:" << SDL_GetError() << std::endl;
-    	return 5;
-    }
+	tex_diffuse = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+			SDL_TEXTUREACCESS_STREAMING, 640, 480);
+	if (!tex_diffuse) {
+		std::cerr << "Couldn't set create texture:" << SDL_GetError()
+				<< std::endl;
+		return 5;
+	}
 
-    tex_depth= SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING, 640,480);
-    if (!tex_depth) {
-    	std::cerr <<  "Couldn't set create texture:" << SDL_GetError() << std::endl;
-    	return 5;
-    }
+	tex_depth = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888,
+			SDL_TEXTUREACCESS_STREAMING, 640, 480);
+	if (!tex_depth) {
+		std::cerr << "Couldn't set create texture:" << SDL_GetError()
+				<< std::endl;
+		return 5;
+	}
 
 	std::cout << "Scene loaded" << std::endl;
 	render();

@@ -4,6 +4,7 @@
 #include <assimp/postprocess.h> // Post processing flags
 #include <stdexcept>
 #include <glm/gtc/type_ptr.hpp>
+#include <boost/random.hpp>
 
 namespace thrender {
 
@@ -29,11 +30,15 @@ namespace thrender {
 		const aiMesh * m = scene->mMeshes[0];
 		outm.resize(m->mNumVertices, m->mNumFaces);
 
+		boost::random::mt19937 rng;
+		boost::random::uniform_real_distribution<> one(0,1);
 		for(unsigned i = 0;i < m->mNumVertices;i++){
 			outm.attributes.positions[i] = glm::vec4(glm::make_vec3(&m->mVertices[i].x),1);
 			outm.attributes.normals[i] =  glm::vec4(glm::make_vec3(&m->mNormals[i].x),1);
 			if (m->HasVertexColors(0))
 				outm.attributes.colors[i] = glm::make_vec4(&m->mColors[i]->r);
+			else
+				outm.attributes.colors[i] = glm::vec4(one(rng), one(rng), one(rng), 1.0f);
 		}
 
 		for(unsigned i = 0;i < m->mNumFaces;i++){
