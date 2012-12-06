@@ -16,14 +16,8 @@
 #include <fstream>
 #include "perf_timer.hpp"
 #include <SDL/SDL.h>
-#include <math.h>
-#include "thrender/camera.hpp"
-#include "thrender/vertex_processor.hpp"
-#include "thrender/mesh.hpp"
-#include "thrender/gbuffer.hpp"
-#include "thrender/utils.hpp"
-#include "thrender/math.hpp"
-#include "thrender/triangle.hpp"
+#include "thrender/thrender.hpp"
+
 
 #define PI	3.141593
 #define HPI	(PI / 2.0f)
@@ -36,67 +30,6 @@ SDL_Texture * tex_diffuse;
 SDL_Texture * tex_depth;
 SDL_Texture * tex_normals;
 
-#define coord2d(x__,y__) (((y__) * 640) + (x__))
-
-struct face {
-	glm::vec3 v[3];
-	struct {
-		bool discard;
-	} flags;
-
-	face(const glm::vec3 & v0, const glm::vec3 & v1, const glm::vec3 & v2,
-			bool _disc) {
-		v[0] = v0;
-		v[1] = v1;
-		v[2] = v2;
-		flags.discard = _disc || !ccw_winding_order();
-	}
-	face() {
-	}
-
-	bool ccw_winding_order() {
-		float adiff = atan2f(v[1].y - v[0].y, v[1].x - v[0].x)
-				- atan2f(v[2].y - v[0].y, v[2].x - v[0].x);
-		if (adiff < 0)
-			adiff = PI2 + adiff;
-		if (adiff < PI) {
-			return false;
-		}
-		return true;
-	}
-};
-
-
-struct primitives_proc_kernel {
-
-	const thrender::mesh & m;
-	const thrust::host_vector<glm::vec4> & ws_vertices;
-	thrender::render_state & rstate;
-
-	primitives_proc_kernel(const thrust::host_vector<glm::vec4> & v,
-			const thrender::mesh & _m, thrender::render_state & _rstate) :
-			m(_m), ws_vertices(v), rstate(_rstate) {
-	}
-
-	thrender::triangle operator()(const glm::ivec3 & tr) {
-		return thrender::triangle(m, ws_vertices, tr.x, tr.y, tr.z,
-				rstate.discard_vertex[tr.x] || rstate.discard_vertex[tr.y]
-						|| rstate.discard_vertex[tr.z]);
-	}
-};
-
-// Extract primitives
-thrust::host_vector<thrender::triangle> process_primitives(const thrender::mesh & m,
-		const thrust::host_vector<glm::vec4> & proj_vertices,
-		thrender::render_state & rstate) {
-	thrust::host_vector<thrender::triangle> primitives(m.total_triangles());
-
-	thrust::transform(m.triangles.begin(), m.triangles.end(),
-			primitives.begin(),
-			primitives_proc_kernel(proj_vertices, m, rstate));
-	return primitives;
-}
-
 struct draw_pixel {
 	thrender::gbuffer & gbuf;
 
@@ -105,7 +38,7 @@ struct draw_pixel {
 	}
 
 	inline bool operator()(int x, int y) {
-		gbuf.diffuse[coord2d(x,y)] = glm::vec4(1, 0, 0, 1);
+		gbuf.diffuse[thrender::coord2d(x,y)] = glm::vec4(1, 0, 0, 1);
 
 		return true;
 	}
@@ -126,7 +59,7 @@ struct interpolate_draw_pixel {
 	}
 
 	inline bool operator()(int x, int y) {
-		size_t coords = coord2d(x,y);
+		size_t coords = thrender::coord2d(x,y);
 		float factor, z;
 		if (!sqlength) {
 			z = from.z;
@@ -203,17 +136,17 @@ struct triangle_interpolate_draw_pixel {
 	triangle_interpolate_draw_pixel(thrender::gbuffer & _gbuf,
 			const thrender::triangle & _tri) :
 			gbuf(_gbuf), tri(_tri) {
-		//sqlength = glm::length(to-from);
-		//sqlength = pow(to.x-from.x,2) + pow(to.y-from.y,2);
 	}
 
 	inline bool operator()(int x, int y) {
-		size_t coords = coord2d(x,y);
+		size_t coords = thrender::coord2d(x,y);
 		float z;
 
 		glm::vec4 lamdas = thrender::math::barycoords(tri.v[0], tri.v[1], tri.v[2], glm::vec2(x,y));
-
 		z = lamdas.x * tri.v[0].z + lamdas.y * tri.v[1].z + lamdas.z * tri.v[2].z;
+		if (gbuf.depth[coords] > z)	// Z-test
+			return true;
+
 		glm::vec4 color =
 				tri.m->attributes.colors[tri.indices[0]] * lamdas.x+
 				tri.m->attributes.colors[tri.indices[1]] * lamdas.y+
@@ -223,24 +156,23 @@ struct triangle_interpolate_draw_pixel {
 				tri.m->attributes.normals[tri.indices[1]] * lamdas.y+
 				tri.m->attributes.normals[tri.indices[2]] * lamdas.z;
 
-		if (gbuf.depth[coords] > z)	// Z-test
-			return true;
+
 
 		gbuf.depth[coords] = z;
 		gbuf.diffuse[coords] = color;
-		gbuf.normal[coords] = tri.m->attributes.normals[tri.indices[0]];
+		gbuf.normal[coords] = normal;
 		return true;
 	}
 };
 
 //! Structure to hold (convex) polygon horizontal limits
-struct poly_hor_limits {
+struct polygon_horizontal_limits {
 
 	int leftmost[480];
 
 	int rightmost[480];
 
-	poly_hor_limits() {
+	polygon_horizontal_limits() {
 		for (int i = 0; i < 480; i++) {
 			leftmost[i] = 10000;
 			rightmost[i] = 0;
@@ -248,12 +180,12 @@ struct poly_hor_limits {
 	}
 };
 
-//! Kernel to find poly vertical contour
+//! Kernel to find polygon vertical contour
 struct mark_vert_contour {
 
-	poly_hor_limits & limits;
+	polygon_horizontal_limits & limits;
 
-	mark_vert_contour(poly_hor_limits & _limits) :
+	mark_vert_contour(polygon_horizontal_limits & _limits) :
 			limits(_limits) {
 	}
 
@@ -296,7 +228,7 @@ struct raster_kernel {
 			}
 
 		// Find triangle contour
-		poly_hor_limits tri_contour;
+		polygon_horizontal_limits tri_contour;
 		mark_vert_contour mark_contour_op(tri_contour);
 		thrender::utils::line_bresenham(pord[0]->x, pord[0]->y, pord[1]->x,
 				pord[1]->y, mark_contour_op);

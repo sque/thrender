@@ -5,6 +5,14 @@
 
 namespace thrender {
 
+	typedef size_t coord2d_t;
+
+	//! Convert 2D coordinates to linear 1D (assuming pitch == max(Y)))
+	template<class T>
+	inline coord2d_t coord2d(T x, T y) {
+		return (((y) * 640) + (x));
+	}
+
 	//! Implementation of a naive G-Buffer
 	struct gbuffer {
 

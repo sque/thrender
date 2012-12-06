@@ -52,7 +52,7 @@ namespace thrender {
 				m.attributes.positions.begin(), m.attributes.positions.end(),		// Input 1
 				thrust::counting_iterator<size_t>(0),			// Input 3
 				proj_vertices.begin(),							// Output
-				vertex_shader(mvp_mat, rstate));		// Operation
+				vertex_shader(mvp_mat, rstate));				// Operation
 
 		return proj_vertices;
 	}
