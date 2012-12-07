@@ -49,6 +49,11 @@ namespace thrender {
 			}
 			return true;
 		}
+
+		/*triangle & operator=(const triangle & tr) {
+			memcpy(this, &tr, sizeof(triangle));
+			return *this;
+		}*/
 	};
 
 }

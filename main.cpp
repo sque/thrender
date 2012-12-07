@@ -128,132 +128,9 @@ struct walk_scan_line {
 	}
 };
 
-struct triangle_interpolate_draw_pixel {
-
-	thrender::gbuffer & gbuf;
-	const thrender::triangle & tri;
-
-	triangle_interpolate_draw_pixel(thrender::gbuffer & _gbuf,
-			const thrender::triangle & _tri) :
-			gbuf(_gbuf), tri(_tri) {
-	}
-
-	inline bool operator()(int x, int y) {
-		size_t coords = thrender::coord2d(x,y);
-		float z;
-
-		glm::vec4 lamdas = thrender::math::barycoords(tri.v[0], tri.v[1], tri.v[2], glm::vec2(x,y));
-		z = lamdas.x * tri.v[0].z + lamdas.y * tri.v[1].z + lamdas.z * tri.v[2].z;
-		if (gbuf.depth[coords] > z)	// Z-test
-			return true;
-
-		glm::vec4 color =
-				tri.m->attributes.colors[tri.indices[0]] * lamdas.x+
-				tri.m->attributes.colors[tri.indices[1]] * lamdas.y+
-				tri.m->attributes.colors[tri.indices[2]] * lamdas.z;
-		glm::vec4 normal =
-				tri.m->attributes.normals[tri.indices[0]] * lamdas.x+
-				tri.m->attributes.normals[tri.indices[1]] * lamdas.y+
-				tri.m->attributes.normals[tri.indices[2]] * lamdas.z;
 
 
 
-		gbuf.depth[coords] = z;
-		gbuf.diffuse[coords] = color;
-		gbuf.normal[coords] = normal;
-		return true;
-	}
-};
-
-//! Structure to hold (convex) polygon horizontal limits
-struct polygon_horizontal_limits {
-
-	int leftmost[480];
-
-	int rightmost[480];
-
-	polygon_horizontal_limits() {
-		for (int i = 0; i < 480; i++) {
-			leftmost[i] = 10000;
-			rightmost[i] = 0;
-		}
-	}
-};
-
-//! Kernel to find polygon vertical contour
-struct mark_vert_contour {
-
-	polygon_horizontal_limits & limits;
-
-	mark_vert_contour(polygon_horizontal_limits & _limits) :
-			limits(_limits) {
-	}
-
-	bool operator()(int x, int y) {
-		if (x < limits.leftmost[y])
-			limits.leftmost[y] = x;
-		if (x > limits.rightmost[y])
-			limits.rightmost[y] = x;
-		return true;
-	}
-};
-
-struct raster_kernel {
-
-	thrender::gbuffer & gbuf;
-	draw_pixel draw_pixel_op;
-
-	raster_kernel(thrender::gbuffer & _gbuf) :
-			gbuf(_gbuf), draw_pixel_op(gbuf) {
-	}
-
-	void operator()(const thrender::triangle & f) {
-		if (f.flags.discard)
-			return;
-
-		// Sort points by y
-		const glm::vec4 * pord[3] = { f.v, f.v + 1, f.v + 2 };
-		for (int i = 0; i < 3; i++) {
-			if (f.v[i].y > pord[0]->y) {
-				pord[0] = f.v + i;
-			} else if (f.v[i].y < pord[2]->y) {
-				pord[2] = f.v + i;
-			}
-		}
-
-		for (int i = 0; i < 3; i++)
-			if ((pord[0] != f.v + i) && (pord[2] != f.v + i)) {
-				pord[1] = f.v + i;
-				break;
-			}
-
-		// Find triangle contour
-		polygon_horizontal_limits tri_contour;
-		mark_vert_contour mark_contour_op(tri_contour);
-		thrender::utils::line_bresenham(pord[0]->x, pord[0]->y, pord[1]->x,
-				pord[1]->y, mark_contour_op);
-		thrender::utils::line_bresenham(pord[1]->x, pord[1]->y, pord[2]->x,
-				pord[2]->y, mark_contour_op);
-		thrender::utils::line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x,
-				pord[2]->y, mark_contour_op);
-
-		// Scan conversion fill
-		triangle_interpolate_draw_pixel pix_op(gbuf, f);
-		for (int y = pord[2]->y; y <= pord[0]->y; y++) {
-			for (int x = tri_contour.leftmost[y]; x < tri_contour.rightmost[y];
-					x++)
-				pix_op(x, y);
-		}
-	}
-};
-
-// Rasterization
-void raster_proc(const thrust::host_vector<thrender::triangle> & triangles, thrender::gbuffer & gbuf) {
-	thrust::for_each(
-			triangles.begin(),
-			triangles.end(),
-			raster_kernel(gbuf));
-}
 
 void upload_images(thrender::gbuffer & gbuf) {
 
@@ -327,18 +204,23 @@ void render() {
 
 	thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
 
+	profiler<boost::chrono::thread_clock> prof("Render procedure");
 	for (int i = 1; i < 15000; i++) {
-		tm.reset();
+		prof.reset();
 		gbuff.clear();
+		prof.checkpoint("Clear buffer");
 		triangles = process_primitives(tux,
 				thrender::process_vertices(tux, cam, rstate), rstate);
-		raster_proc(triangles, gbuff);
-		timer::duration dt = tm.passed();
-		std::cout << "Frame took " << dt << std::endl;
-		upload_images(gbuff);
+		prof.checkpoint("Process primitives");
+		thrender::process_fragments(triangles, gbuff);
+		prof.checkpoint("Rasterize");
+		//upload_images(gbuff);
+		prof.checkpoint("Upload images");
 
-		tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
-		cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,0));
+		//tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
+		//cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,0));
+		std::cout << prof.report() << std::endl;
+
 	}
 	thrust::host_vector<thrender::triangle>::iterator it;
 
