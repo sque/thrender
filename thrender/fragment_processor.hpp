@@ -23,8 +23,8 @@ namespace thrender {
 			/** FixMe: Coordinates are passed as integers (floor rounding).
 			 * In small triangles this is out of borders
 			 */
-			glm::vec4 lamdas = math::barycoords(ptri->v[0], ptri->v[1], ptri->v[2], glm::vec2(x,y));
-			z = lamdas.x * ptri->v[0].z + lamdas.y * ptri->v[1].z + lamdas.z * ptri->v[2].z;
+			glm::vec4 lamdas = math::barycoords(*ptri->pv[0], *ptri->pv[1], *ptri->pv[2], glm::vec2(x,y));
+			z = lamdas.x * ptri->pv[0]->z + lamdas.y * ptri->pv[1]->z + lamdas.z * ptri->pv[2]->z;
 			if (gbuf.depth[coords] > z)	// Z-test
 				return true;
 
@@ -57,22 +57,25 @@ namespace thrender {
 		}
 
 		void operator()(const triangle & tr) {
-			if (tr.flags.discard)
-				return;
+
+			//if (m.render_buffer.discard_vertices[tr.x] || m.render_buffer.discard_vertices[tr.y]
+							//|| m.render_buffer.discard_vertices[tr.z])
+			if (!tr.ccw_winding_order())
+				return;		// Face culling
 
 			// Sort points by y
-			const glm::vec4 * pord[3] = { tr.v, tr.v + 1, tr.v + 2 };
+			const glm::vec4 * pord[3] = { tr.pv[0], tr.pv[1], tr.pv[2] };
 			for (int i = 0; i < 3; i++) {
-				if (tr.v[i].y > pord[0]->y) {
-					pord[0] = tr.v + i;
-				} else if (tr.v[i].y < pord[2]->y) {
-					pord[2] = tr.v + i;
+				if (tr.pv[i]->y > pord[0]->y) {
+					pord[0] = tr.pv[i];
+				} else if (tr.pv[i]->y < pord[2]->y) {
+					pord[2] = tr.pv[i];
 				}
 			}
 
 			for (int i = 0; i < 3; i++)
-				if ((pord[0] != tr.v + i) && (pord[2] != tr.v + i)) {
-					pord[1] = tr.v + i;
+				if ((pord[0] != tr.pv[i]) && (pord[2] != tr.pv[i])) {
+					pord[1] = tr.pv[i];
 					break;
 				}
 

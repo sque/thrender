@@ -49,6 +49,8 @@ namespace thrender {
 				m->mFaces[i].mIndices[2]
 				);
 			}
+
+		outm.post_update();
 		return outm;
 	}
 }

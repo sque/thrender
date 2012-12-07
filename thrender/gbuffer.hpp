@@ -65,10 +65,16 @@ namespace thrender {
 			thrust::fill(clear_depth.begin(), clear_depth.end(), depth_value);
 		}
 		void clear() {
-			// 114ns fill, 64ns copy
-			thrust::copy(clear_diffuse.begin(), clear_diffuse.end(), diffuse.begin());
+			// 0.051 ms !
+			memcpy(&diffuse[0], &clear_diffuse[0], clear_diffuse.size());
+			memcpy(&normal[0], &clear_normal[0], clear_normal.size());
+			memcpy(&depth[0], &clear_depth[0], clear_depth.size());
+			// 64ms copy
+			/*thrust::copy(clear_diffuse.begin(), clear_diffuse.end(), diffuse.begin());
 			thrust::copy(clear_normal.begin(), clear_normal.end(), normal.begin());
 			thrust::copy(clear_depth.begin(), clear_depth.end(), depth.begin());
+			*/
+			// 114ms fill
 			/*thrust::fill(buf_normal.begin(), buf_normal.end(), glm::vec3(0.0,0.0,0.0));
 			thrust::fill(buf_depth.begin(), buf_depth.end(), 0);
 			thrust::fill(buf_diffuse.begin(), buf_diffuse.end(), glm::vec4(0.0f,0.0f,0.0,1.0));

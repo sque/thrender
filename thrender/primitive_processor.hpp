@@ -18,25 +18,23 @@ namespace thrender {
 		}
 
 		triangle operator()(const glm::ivec3 & tr) {
-			return triangle(
-					m,
+			return triangle();
+					/*m,
 					ws_vertices,
 					tr.x, tr.y, tr.z,
-					rstate.discard_vertex[tr.x] || rstate.discard_vertex[tr.y]
-							|| rstate.discard_vertex[tr.z]);
+					m.render_buffer.discard_vertices[tr.x] || m.render_buffer.discard_vertices[tr.y]
+							|| m.render_buffer.discard_vertices[tr.z]);*/
 		}
 	};
 
 	// Process projected vertices and extract primitives.
-	thrust::host_vector<triangle> process_primitives(const mesh & m,
-			const thrust::host_vector<glm::vec4> & proj_vertices,
-			thrender::render_state & rstate) {
+	thrust::host_vector<triangle> process_primitives(const mesh & m, thrender::render_state & rstate) {
 		thrust::host_vector<triangle> primitives(m.total_triangles());
 
 		thrust::transform(
 				m.triangles.begin(), m.triangles.end(),		// Input
 				primitives.begin(),							// Output
-				primitives_proc_kernel(proj_vertices, m, rstate));
+				primitives_proc_kernel(m.render_buffer.proj_vertices, m, rstate));
 		return primitives;
 	}
 }

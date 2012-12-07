@@ -209,12 +209,12 @@ void render() {
 		prof.reset();
 		gbuff.clear();
 		prof.checkpoint("Clear buffer");
-		triangles = process_primitives(tux,
-				thrender::process_vertices(tux, cam, rstate), rstate);
+		thrender::process_vertices(tux, cam, rstate);
+		//triangles = thrender::process_primitives(tux, rstate);
 		prof.checkpoint("Process primitives");
-		thrender::process_fragments(triangles, gbuff);
+		thrender::process_fragments(tux.render_buffer.triangles, gbuff);
 		prof.checkpoint("Rasterize");
-		//upload_images(gbuff);
+		upload_images(gbuff);
 		prof.checkpoint("Upload images");
 
 		//tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
@@ -229,7 +229,7 @@ void render() {
 	for (it = triangles.begin(); it != triangles.end(); it++) {
 		thrender::triangle & f = *it;
 		for (int i = 0; i < 3; i++) {
-			myfile << f.v[i].x << "," << f.v[i].y << "," << f.v[i].z
+			myfile << f.pv[i]->x << "," << f.pv[i]->y << "," << f.pv[i]->z
 					<< std::endl;
 		}
 	}
