@@ -51,10 +51,14 @@ namespace thrender {
 			return true;
 		}
 
-		/*inline triangle & operator=(const triangle & tr) {
-			memcpy(this, &tr, sizeof(triangle));
-			return *this;
-		}*/
+		glm::vec2 size() const {
+			float x_max = std::max(std::max(pv[0]->x, pv[1]->x), pv[2]->x);
+			float x_min = std::min(std::min(pv[0]->x, pv[1]->x), pv[2]->x);
+
+			float y_max = std::max(std::max(pv[0]->y, pv[1]->y), pv[2]->y);
+			float y_min = std::min(std::min(pv[0]->y, pv[1]->y), pv[2]->y);
+			return glm::vec2(x_max-x_min, y_max-y_min);
+		}
 	};
 
 }

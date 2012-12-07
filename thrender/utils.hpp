@@ -69,7 +69,7 @@ namespace utils {
 
 	std::string info(const glm::vec2 & v) {
 		std::stringstream ss;
-		ss << v.x << "," << v.y << std::endl;
+		ss << v.x << "," << v.y;
 		return ss.str();
 	}
 

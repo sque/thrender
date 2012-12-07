@@ -198,22 +198,20 @@ void render() {
 	timer tm;
 	thrender::gbuffer gbuff(640, 480);
 	gbuff.set_clear_diffuse(glm::vec4(0, 0, 0, 1));
-	thrust::host_vector<thrender::triangle> triangles;
 	thrender::render_state rstate;
 	thrender::mesh tux = thrender::load_model("/home/sque/Downloads/tux__.ply");
-
+	thrust::host_vector<thrender::triangle>::iterator it;
 	thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
 
 	profiler<boost::chrono::thread_clock> prof("Render procedure");
-	for (int i = 1; i < 15000; i++) {
+	for (int i = 1; i < 150000; i++) {
 		prof.reset();
 		gbuff.clear();
 		prof.checkpoint("Clear buffer");
 		thrender::process_vertices(tux, cam, rstate);
-		//triangles = thrender::process_primitives(tux, rstate);
-		prof.checkpoint("Process primitives");
+		prof.checkpoint("Process vertices");
 		thrender::process_fragments(tux.render_buffer.triangles, gbuff);
-		prof.checkpoint("Rasterize");
+		prof.checkpoint("Process fragments");
 		upload_images(gbuff);
 		prof.checkpoint("Upload images");
 
@@ -222,21 +220,17 @@ void render() {
 		std::cout << prof.report() << std::endl;
 
 	}
-	thrust::host_vector<thrender::triangle>::iterator it;
 
 	std::ofstream myfile;
 	myfile.open("pixels.txt");
-	for (it = triangles.begin(); it != triangles.end(); it++) {
+	for (it = tux.render_buffer.triangles.begin(); it != tux.render_buffer.triangles.end(); it++) {
 		thrender::triangle & f = *it;
-		for (int i = 0; i < 3; i++) {
-			myfile << f.pv[i]->x << "," << f.pv[i]->y << "," << f.pv[i]->z
-					<< std::endl;
-		}
+		myfile << thrender::utils::info(f.size()) << std::endl;
 	}
 	myfile.close();
-	while (1) {
-	}
+
 	std::cout << "pixels written" << std::endl;
+	while (1) ;
 }
 
 int main() {

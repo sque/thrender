@@ -3,6 +3,7 @@
 #include "./raster.hpp"
 #include "./gbuffer.hpp"
 #include "./triangle.hpp"
+#include "./math.hpp"
 
 namespace thrender {
 
@@ -44,15 +45,49 @@ namespace thrender {
 		}
 	};
 
+	struct triangle_single_pixel {
+
+			gbuffer & gbuf;
+
+			triangle_single_pixel(gbuffer & _gbuf)
+			:
+					gbuf(_gbuf)
+			{}
+
+			bool operator()(int x, int y, const triangle * ptri) {
+				size_t coords = coord2d(x,y);
+				float z = ptri->pv[0]->z; // 1 Pixel no meaning for median
+
+				if (gbuf.depth[coords] > z)	// Z-test
+					return true;
+
+				glm::vec4 color =
+						ptri->m->attributes.colors[ptri->indices[0]] * (1.0f/3.0f)+
+						ptri->m->attributes.colors[ptri->indices[1]] * (1.0f/3.0f)+
+						ptri->m->attributes.colors[ptri->indices[2]] * (1.0f/3.0f);
+				glm::vec4 normal =
+						ptri->m->attributes.normals[ptri->indices[0]] * (1.0f/3.0f)+
+						ptri->m->attributes.normals[ptri->indices[1]] * (1.0f/3.0f)+
+						ptri->m->attributes.normals[ptri->indices[2]] * (1.0f/3.0f);
+
+				gbuf.depth[coords] = z;
+				gbuf.diffuse[coords] = color;
+				gbuf.normal[coords] = normal;
+				return true;
+			}
+		};
+
 	struct fragment_processor_kernel {
 
 		gbuffer & gbuf;
 		triangle_interpolate_draw_pixel pix_op;
+		triangle_single_pixel singlepix_op;
 
 		fragment_processor_kernel(gbuffer & _gbuf)
 		:
 			gbuf(_gbuf),
-			pix_op(gbuf)
+			pix_op(gbuf),
+			singlepix_op(gbuf)
 		{
 		}
 
@@ -61,23 +96,17 @@ namespace thrender {
 			//if (m.render_buffer.discard_vertices[tr.x] || m.render_buffer.discard_vertices[tr.y]
 							//|| m.render_buffer.discard_vertices[tr.z])
 			if (!tr.ccw_winding_order())
-				return;		// Face culling
+				return;						// Face-culling
 
 			// Sort points by y
-			const glm::vec4 * pord[3] = { tr.pv[0], tr.pv[1], tr.pv[2] };
-			for (int i = 0; i < 3; i++) {
-				if (tr.pv[i]->y > pord[0]->y) {
-					pord[0] = tr.pv[i];
-				} else if (tr.pv[i]->y < pord[2]->y) {
-					pord[2] = tr.pv[i];
-				}
-			}
+			const glm::vec4 * pord[3] = {tr.pv[0], tr.pv[1], tr.pv[2]};
+			math::sort3vec_by_y(pord);
 
-			for (int i = 0; i < 3; i++)
-				if ((pord[0] != tr.pv[i]) && (pord[2] != tr.pv[i])) {
-					pord[1] = tr.pv[i];
-					break;
-				}
+			glm::vec2 size = tr.size();
+			if (size.y < 1.0f && size.x < 1.0f) {
+				singlepix_op(pord[0]->x, pord[1]->y, &tr);
+				return;
+			}
 
 			// Find triangle contour
 			polygon_horizontal_limits tri_contour;

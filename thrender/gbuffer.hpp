@@ -16,18 +16,18 @@ namespace thrender {
 	//! Implementation of a naive G-Buffer
 	struct gbuffer {
 
-		typedef thrust::host_vector<glm::vec4> diffuce_vector;
+		typedef thrust::host_vector<glm::vec4> diffuse_vector;
 		typedef thrust::host_vector<glm::vec4> normal_vector;
 		typedef thrust::host_vector<float> depth_vector;
 
 		unsigned width;
 		unsigned height;
 
-		diffuce_vector diffuse;
+		diffuse_vector diffuse;
 		normal_vector normal;
 		depth_vector depth;
 
-		diffuce_vector clear_diffuse;
+		diffuse_vector clear_diffuse;
 		normal_vector clear_normal;
 		depth_vector clear_depth;
 
@@ -47,13 +47,13 @@ namespace thrender {
 				0);
 		}
 
-		void set_clear_values(const diffuce_vector::value_type & diff_value, const normal_vector::value_type & norm_value, const depth_vector::value_type & depth_value) {
+		void set_clear_values(const diffuse_vector::value_type & diff_value, const normal_vector::value_type & norm_value, const depth_vector::value_type & depth_value) {
 			set_clear_diffuse(diff_value);
 			set_clear_normal(norm_value);
 			set_clear_depth(depth_value);
 		}
 
-		void set_clear_diffuse(const diffuce_vector::value_type & diff_value) {
+		void set_clear_diffuse(const diffuse_vector::value_type & diff_value) {
 			thrust::fill(clear_diffuse.begin(), clear_diffuse.end(), diff_value);
 		}
 
@@ -65,20 +65,20 @@ namespace thrender {
 			thrust::fill(clear_depth.begin(), clear_depth.end(), depth_value);
 		}
 		void clear() {
-			// 0.051 ms !
-			memcpy(&diffuse[0], &clear_diffuse[0], clear_diffuse.size());
-			memcpy(&normal[0], &clear_normal[0], clear_normal.size());
-			memcpy(&depth[0], &clear_depth[0], clear_depth.size());
-			// 64ms copy
+			// ~5 ms (Debug & Release) !
+			/*memcpy(&diffuse[0], &clear_diffuse[0], clear_diffuse.size()*sizeof(diffuse_vector::value_type));
+			memcpy(&normal[0], &clear_normal[0], clear_normal.size()*sizeof(normal_vector::value_type));
+			memcpy(&depth[0], &clear_depth[0], clear_depth.size()*sizeof(depth_vector::value_type));
+			*/
+			// 64ms copy (Debug) ~7ms (Debug)
 			/*thrust::copy(clear_diffuse.begin(), clear_diffuse.end(), diffuse.begin());
 			thrust::copy(clear_normal.begin(), clear_normal.end(), normal.begin());
 			thrust::copy(clear_depth.begin(), clear_depth.end(), depth.begin());
 			*/
-			// 114ms fill
-			/*thrust::fill(buf_normal.begin(), buf_normal.end(), glm::vec3(0.0,0.0,0.0));
-			thrust::fill(buf_depth.begin(), buf_depth.end(), 0);
-			thrust::fill(buf_diffuse.begin(), buf_diffuse.end(), glm::vec4(0.0f,0.0f,0.0,1.0));
-			*/
+			// 114ms fill (Debug) ~5ms (Release)
+			thrust::fill(normal.begin(), normal.end(), clear_normal[0]);
+			thrust::fill(diffuse.begin(), diffuse.end(), clear_diffuse[0]);
+			thrust::fill(depth.begin(), depth.end(), clear_depth[0]);
 		}
 	};
 
