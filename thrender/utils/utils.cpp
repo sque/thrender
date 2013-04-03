@@ -7,6 +7,7 @@
 #include <boost/random.hpp>
 
 namespace thrender {
+namespace utils {
 
 	mesh load_model(const std::string & fname) {
 		// Create an instance of the Importer class
@@ -53,4 +54,4 @@ namespace thrender {
 		outm.post_update();
 		return outm;
 	}
-}
+}}
