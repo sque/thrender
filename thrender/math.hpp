@@ -3,10 +3,82 @@
 #include <math.h>
 #include <glm/glm.hpp>
 
-namespace thrender {
+namespace thrender{
 namespace math{
 
-	// taken from http://www.gamedev.net/topic/621445-barycentric-coordinates-c-code-check/
+	//! Line walking operator using Bresenham algorithm
+	/**
+	 * http://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
+	 * @param x1 Starting point x-component
+	 * @param y1 Starting point y-component
+	 * @param x2 Ending point x-component
+	 * @param y2 Ending point y-component
+	 */
+	template<class Functor>
+	double line_bresenham(int x1, int y1, int x2, int y2, Functor action)
+	{
+		int dx, dy, i, e;
+		int incx, incy, inc1, inc2;
+		int x, y;
+		double res = 0;
+
+		dx = x2 - x1;
+		dy = y2 - y1;
+
+		if (dx < 0)
+			dx = -dx;
+		if (dy < 0)
+			dy = -dy;
+		incx = 1;
+		if (x2 < x1)
+			incx = -1;
+		incy = 1;
+		if (y2 < y1)
+			incy = -1;
+		x = x1;
+		y = y1;
+
+		if (dx > dy) {
+			if (!action(x, y))
+				return res;
+
+			e = 2 * dy - dx;
+			inc1 = 2 * (dy - dx);
+			inc2 = 2 * dy;
+			for (i = 0; i < dx; i++) {
+				if (e >= 0) {
+					y += incy;
+					e += inc1;
+				} else
+					e += inc2;
+				x += incx;
+				if (!action(x, y))
+					return res;
+			}
+		} else {
+			if (!action(x, y))
+				return res;
+
+			e = 2 * dx - dy;
+			inc1 = 2 * (dx - dy);
+			inc2 = 2 * dx;
+			for (i = 0; i < dy; i++) {
+				if (e >= 0) {
+					x += incx;
+					e += inc1;
+				} else
+					e += inc2;
+				y += incy;
+				if (!action(x, y))
+					return res;
+			}
+		}
+		return 0;
+	}
+
+	/**
+	 * @origin http://www.gamedev.net/topic/621445-barycentric-coordinates-c-code-check/
+	 */
 	template <typename InVec, typename InVec2>
 	inline glm::vec4 barycoords(InVec const & a, InVec const & b, InVec const & c, InVec2 const & vec)
 	{
@@ -21,8 +93,10 @@ namespace math{
 		//return  (a * lambda.x) + (b * lambda.y) + (c * lambda.z);
 	}
 
-	// Sort 3 vectors by y using sorting networks
-	// http://stackoverflow.com/questions/2786899/fastest-sort-of-fixed-length-6-int-array
+	//! Sort 3 vectors by y using sorting networks
+	/**
+	 * @origin http://stackoverflow.com/questions/2786899/fastest-sort-of-fixed-length-6-int-array
+	 */
 	template<class Vec>
 	static inline void sort3vec_by_y(const Vec * d[3]){
 		#define sort_min_y(v1, v2) (v1->y < v2->y?v1:v2)
