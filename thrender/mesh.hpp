@@ -12,26 +12,35 @@ namespace thrender {
 	struct mesh;
 
 	//! Buffer needed per mesh for intermediate processing
-	struct mesh_intermediate_buffer {
+	struct mesh_intermediate_buffer
+	{
 
 		typedef thrust::host_vector<glm::vec4> projvertices_vector;
+
 		typedef thrust::host_vector<bool> discardvertices_vector;
+
 		typedef thrust::host_vector<triangle> triangles_vector;
 
-		discardvertices_vector discard_vertices;
-		projvertices_vector proj_vertices;
+
+		//! A vector with all projected vertices
+		projvertices_vector projected_vertices;
+
+		//! A bitmap with all discarded vertices
+		discardvertices_vector discarded_vertices;
+
+		//! A vector with all mesh triangles of projected vectors
 		triangles_vector triangles;
 
 		mesh_intermediate_buffer() {}
 
 		void reset() {
-			discard_vertices.clear();
-			discard_vertices.resize(proj_vertices.size(), false);
+			discarded_vertices.clear();
+			discarded_vertices.resize(projected_vertices.size(), false);
 		}
 
-		void post_update(mesh &m, size_t total_vertices, thrust::host_vector<glm::ivec3> & itriangles) {
-			proj_vertices.resize(total_vertices);
-			discard_vertices.resize(total_vertices);
+		void post_update(mesh & m, size_t total_vertices, thrust::host_vector<glm::ivec3> & itriangles) {
+			projected_vertices.resize(total_vertices);
+			discarded_vertices.resize(total_vertices);
 			triangles.clear();
 
 			thrust::host_vector<glm::ivec3>::iterator it_index;
@@ -40,7 +49,7 @@ namespace thrender {
 				triangles.push_back(
 					triangle(
 						m,
-						proj_vertices,
+						projected_vertices,
 						indices.x, indices.y, indices.z,
 						false)
 					);
@@ -118,7 +127,4 @@ namespace thrender {
 		}
 
 	};
-
-	//! Load a model from an object file
-	mesh load_model(const std::string & fname);
 };

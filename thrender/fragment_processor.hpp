@@ -91,7 +91,7 @@ namespace thrender {
 		{
 		}
 
-		void operator()(const triangle & tr) {
+		void operator()(const triangle & tr)  {
 
 			//if (m.render_buffer.discard_vertices[tr.x] || m.render_buffer.discard_vertices[tr.y]
 							//|| m.render_buffer.discard_vertices[tr.z])
@@ -102,7 +102,7 @@ namespace thrender {
 			const glm::vec4 * pord[3] = {tr.pv[0], tr.pv[1], tr.pv[2]};
 			math::sort3vec_by_y(pord);
 
-			glm::vec2 size = tr.size();
+			glm::vec2 size = tr.bounding_box();
 			if (size.y < 1.0f && size.x < 1.0f) {
 				singlepix_op(pord[0]->x, pord[1]->y, &tr);
 				return;
@@ -111,11 +111,11 @@ namespace thrender {
 			// Find triangle contour
 			polygon_horizontal_limits tri_contour;
 			mark_vertical_contour mark_contour_op(tri_contour);
-			thrender::utils::line_bresenham(pord[0]->x, pord[0]->y, pord[1]->x,
+			thrender::math::line_bresenham(pord[0]->x, pord[0]->y, pord[1]->x,
 					pord[1]->y, mark_contour_op);
-			thrender::utils::line_bresenham(pord[1]->x, pord[1]->y, pord[2]->x,
+			thrender::math::line_bresenham(pord[1]->x, pord[1]->y, pord[2]->x,
 					pord[2]->y, mark_contour_op);
-			thrender::utils::line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x,
+			thrender::math::line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x,
 					pord[2]->y, mark_contour_op);
 
 			// Scan conversion fill
@@ -128,10 +128,10 @@ namespace thrender {
 	};
 
 	// Rasterization of fragments/primitives
-	void process_fragments(const thrust::host_vector<triangle> & triangles, gbuffer & gbuf) {
+	void process_fragments(const thrust::host_vector<triangle> & triangles, render_state & rstate) {
 		thrust::for_each(
 				triangles.begin(),
 				triangles.end(),
-				fragment_processor_kernel(gbuf));
+				fragment_processor_kernel(rstate.gbuff));
 	}
 }

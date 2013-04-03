@@ -14,22 +14,22 @@ struct perf_timer {
 
 	typedef typename CLOCK::duration duration;
 
-	time_point last_measure;
+	time_point last_measurement;
 
 	perf_timer() {
-		last_measure = clock::now();
+		last_measurement = clock::now();
 	}
 
 	//! Return duration since last reset
 	duration passed(){
-		return clock::now() - last_measure;
+		return clock::now() - last_measurement;
 	}
 
 	//! Return duration since last reset and reset
 	duration reset() {
 		time_point now = clock::now();
-		duration passed = now - last_measure;
-		last_measure = clock::now();
+		duration passed = now - last_measurement;
+		last_measurement = clock::now();
 		return passed;
 	}
 };
@@ -48,9 +48,10 @@ struct profiler{
 
 	std::string name;
 
-	profiler(const std::string & _name) :
-
-		name(_name){
+	profiler(const std::string & _name)
+	:
+		name(_name)
+	{
 	}
 
 	void checkpoint(const std::string & name) {

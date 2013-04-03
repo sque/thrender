@@ -34,7 +34,7 @@ namespace thrender {
 		thrust::transform(
 				m.triangles.begin(), m.triangles.end(),		// Input
 				primitives.begin(),							// Output
-				primitives_proc_kernel(m.render_buffer.proj_vertices, m, rstate));
+				primitives_proc_kernel(m.render_buffer.projected_vertices, m, rstate));
 		return primitives;
 	}
 }

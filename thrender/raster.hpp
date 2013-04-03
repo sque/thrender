@@ -2,7 +2,7 @@
 
 namespace thrender {
 
-//! Structure to hold (convex) polygon horizontal limits
+	//! Structure to hold (convex) polygon horizontal limits
 	struct polygon_horizontal_limits {
 
 		int leftmost[480];
@@ -23,8 +23,8 @@ namespace thrender {
 		polygon_horizontal_limits & limits;
 
 		mark_vertical_contour(polygon_horizontal_limits & _limits) :
-				limits(_limits) {
-		}
+			limits(_limits)
+		{}
 
 		bool operator()(int x, int y) {
 			if (x < limits.leftmost[y])

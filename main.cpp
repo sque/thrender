@@ -17,13 +17,16 @@
 #include "perf_timer.hpp"
 #include <SDL/SDL.h>
 #include "thrender/thrender.hpp"
+#include "thrender/utils/mesh.hpp"
+#include "thrender/utils/to_string.hpp"
+#include "thrender/utils/frame_rate_keeper.hpp"
 
 
 #define PI	3.141593
 #define HPI	(PI / 2.0f)
 #define PI2	(2 * PI)
 
-typedef perf_timer<boost::chrono::thread_clock> timer;
+typedef perf_timer<boost::chrono::high_resolution_clock> timer;
 SDL_Window * window;
 SDL_Renderer * renderer;
 SDL_Texture * tex_diffuse;
@@ -198,34 +201,37 @@ void render() {
 	timer tm;
 	thrender::gbuffer gbuff(640, 480);
 	gbuff.set_clear_diffuse(glm::vec4(0, 0, 0, 1));
-	thrender::render_state rstate;
-	thrender::mesh tux = thrender::load_model("/home/sque/Downloads/tux__.ply");
+
+	thrender::mesh tux = thrender::utils::load_model("/home/sque/Downloads/cube.ply");
 	thrust::host_vector<thrender::triangle>::iterator it;
 	thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
 
-	profiler<boost::chrono::thread_clock> prof("Render procedure");
+	thrender::render_state rstate(cam, gbuff);
+	thrender::utils::frame_rate_keeper<> lock_fps(10);
+	profiler<boost::chrono::high_resolution_clock> prof("Render procedure");
 	for (int i = 1; i < 150000; i++) {
 		prof.reset();
 		gbuff.clear();
 		prof.checkpoint("Clear buffer");
-		thrender::process_vertices(tux, cam, rstate);
+		thrender::process_vertices<thrender::shaders::default_vertex_shader>(tux, rstate);
 		prof.checkpoint("Process vertices");
-		thrender::process_fragments(tux.render_buffer.triangles, gbuff);
+		thrender::process_fragments(tux.render_buffer.triangles, rstate);
 		prof.checkpoint("Process fragments");
 		upload_images(gbuff);
 		prof.checkpoint("Upload images");
 
-		//tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
-		//cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,0));
+		tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
+		cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,0));
 		std::cout << prof.report() << std::endl;
 
+		lock_fps.keep_frame_rate();
 	}
 
 	std::ofstream myfile;
 	myfile.open("pixels.txt");
 	for (it = tux.render_buffer.triangles.begin(); it != tux.render_buffer.triangles.end(); it++) {
 		thrender::triangle & f = *it;
-		myfile << thrender::utils::info(f.size()) << std::endl;
+		myfile << glm::to_string(f.bounding_box()) << std::endl;
 	}
 	myfile.close();
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "./gbuffer.hpp"
+#include "./camera.hpp"
 namespace thrender {
 
 	struct render_state {
@@ -7,9 +9,14 @@ namespace thrender {
 		// Normalization of z-buffer
 		float near, far;
 
-		render_state() :
+		gbuffer & gbuff;
+		camera & cam;
+
+		render_state(camera & _camera, gbuffer & _gbuffer) :
 			near(1),
-			far(0) {}
+			far(0),
+			gbuff(_gbuffer),
+			cam(_camera){}
 
 	};
 }

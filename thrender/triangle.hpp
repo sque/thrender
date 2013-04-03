@@ -51,7 +51,8 @@ namespace thrender {
 			return true;
 		}
 
-		glm::vec2 size() const {
+		//! Get the size of the smallest bounding box that fits this triangle
+		glm::vec2 bounding_box() const {
 			float x_max = std::max(std::max(pv[0]->x, pv[1]->x), pv[2]->x);
 			float x_min = std::min(std::min(pv[0]->x, pv[1]->x), pv[2]->x);
 
