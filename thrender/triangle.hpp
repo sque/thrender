@@ -6,35 +6,38 @@
 
 namespace thrender {
 
-	struct mesh;
+	template<class A>
+	struct vertex_array;
 
 	// Triangle primitive
+	template <class AttributeType>
 	struct triangle {
+
+		typedef AttributeType attribute_type;
 
 		size_t indices[3];
 
 		const glm::vec4 * pv[3];
-		const thrust::host_vector<glm::vec4> (*proj_vertices);
-		const mesh * m;
+		const thrust::host_vector<attribute_type> (*processed_vertices);
 
 		struct {
-			bool discard;
+			bool discarded;
 		} flags;
 
-		triangle(mesh & _m,
-				const thrust::host_vector<glm::vec4> & _proj_vertices,
+		//! Construct a new triangle
+		triangle(const thrust::host_vector<attribute_type> & _processed_vertices,
 				size_t iv0,
 				size_t iv1,
 				size_t iv2,
 				bool _discard) :
-				proj_vertices(&_proj_vertices), m(&_m) {
+				processed_vertices(&_processed_vertices){
 			indices[0] = iv0;
 			indices[1] = iv1;
 			indices[2] = iv2;
-			pv[0] = &(*proj_vertices)[iv0];
-			pv[1] = &(*proj_vertices)[iv1];
-			pv[2] = &(*proj_vertices)[iv2];
-			flags.discard = _discard || !ccw_winding_order();
+			pv[0] = &thrust::get<0>((*processed_vertices)[iv0]);
+			pv[1] = &thrust::get<0>((*processed_vertices)[iv1]);
+			pv[2] = &thrust::get<0>((*processed_vertices)[iv2]);
+			flags.discarded = _discard || !ccw_winding_order();
 		}
 
 		triangle() {}

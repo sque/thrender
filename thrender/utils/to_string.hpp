@@ -1,17 +1,16 @@
 #pragma once
 
-#include "mesh.hpp"
+#include "../vertex_array.hpp"
 #include <sstream>
 #include <glm/gtx/string_cast.hpp>
 
 namespace thrender {
 namespace utils {
 
-
-
-	inline std::string to_string(const mesh & m) {
+	template<class A>
+	inline std::string to_string(const vertex_array<A> & m) {
 		std::stringstream ss;
-		ss << "Mesh[Vertices: " << m.total_vertices() << ", Triangles:" << m.triangles.size() << "]";
+		ss << "VertexArray[Vertices: " << m.total_vertices() << ", Triangles:" << m.triangles.size() << "]";
 		return ss.str();
 	}
 
