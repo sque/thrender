@@ -50,12 +50,12 @@ namespace utils {
 		boost::random::uniform_real_distribution<> one(0,1);
 
 		for(unsigned i = 0;i < m->mNumVertices;i++){
-			thrust::get<0>(outm.attributes[i]) = glm::vec4(glm::make_vec3(&m->mVertices[i].x),1);
-			thrust::get<0>(outm.attributes[i]) =  glm::vec4(glm::make_vec3(&m->mNormals[i].x),1);
+			ATTRIBUTE(outm.attributes[i], POSITION) = glm::vec4(glm::make_vec3(&m->mVertices[i].x),1);
+			ATTRIBUTE(outm.attributes[i], NORMAL) =  glm::vec4(glm::make_vec3(&m->mNormals[i].x),1);
 			if (m->HasVertexColors(0))
-				thrust::get<0>(outm.attributes[i]) = glm::make_vec4(&m->mColors[i]->r);
+				ATTRIBUTE(outm.attributes[i], COLOR) = glm::make_vec4(&m->mColors[i]->r);
 			else
-				thrust::get<0>(outm.attributes[i]) = glm::vec4(one(rng), one(rng), one(rng), 1.0f);
+				ATTRIBUTE(outm.attributes[i], COLOR) = glm::vec4(one(rng), one(rng), one(rng), 1.0f);
 		}
 
 		for(unsigned i = 0;i < m->mNumFaces;i++){
@@ -69,6 +69,4 @@ namespace utils {
 		outm.post_update();
 		return outm;
 	}
-
-}
-}
+}}

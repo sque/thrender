@@ -2,22 +2,28 @@
 
 #include "./raster.hpp"
 #include "./gbuffer.hpp"
-#include "./triangle.hpp"
+#include "./vertex_array.hpp"
 #include "./math.hpp"
 
 namespace thrender {
 
 	// Triangle interpolation with barycoords
+	template<class VertexArrayType>
 	struct triangle_interpolate_draw_pixel {
 
-		gbuffer & gbuf;
+		typedef VertexArrayType vertex_array_type;
+		typedef typename vertex_array_type::primitive_type triangle_type;
 
-		triangle_interpolate_draw_pixel(gbuffer & _gbuf)
+		gbuffer & gbuf;
+		const vertex_array_type & m;
+
+		triangle_interpolate_draw_pixel(const vertex_array_type & object, gbuffer & _gbuf)
 		:
-				gbuf(_gbuf)
+				gbuf(_gbuf),
+				m(object)
 		{}
 
-		bool operator()(int x, int y, const triangle * ptri) {
+		bool operator()(int x, int y, const triangle_type * ptri) {
 			size_t coords = coord2d(x,y);
 			float z;
 
@@ -30,13 +36,13 @@ namespace thrender {
 				return true;
 
 			glm::vec4 color =
-					ptri->m->attributes.colors[ptri->indices[0]] * lamdas.x+
-					ptri->m->attributes.colors[ptri->indices[1]] * lamdas.y+
-					ptri->m->attributes.colors[ptri->indices[2]] * lamdas.z;
+					ATTRIBUTE(m.attributes[ptri->indices[0]], COLOR) * lamdas.x+
+					ATTRIBUTE(m.attributes[ptri->indices[1]], COLOR) * lamdas.y+
+					ATTRIBUTE(m.attributes[ptri->indices[2]], COLOR) * lamdas.z;
 			glm::vec4 normal =
-					ptri->m->attributes.normals[ptri->indices[0]] * lamdas.x+
-					ptri->m->attributes.normals[ptri->indices[1]] * lamdas.y+
-					ptri->m->attributes.normals[ptri->indices[2]] * lamdas.z;
+					ATTRIBUTE(m.attributes[ptri->indices[0]], NORMAL) * lamdas.x+
+					ATTRIBUTE(m.attributes[ptri->indices[1]], NORMAL) * lamdas.y+
+					ATTRIBUTE(m.attributes[ptri->indices[2]], NORMAL) * lamdas.z;
 
 			gbuf.depth[coords] = z;
 			gbuf.diffuse[coords] = color;
@@ -45,16 +51,22 @@ namespace thrender {
 		}
 	};
 
+	template <class VertexArrayType>
 	struct triangle_single_pixel {
 
-			gbuffer & gbuf;
+			typedef VertexArrayType vertex_array_type;
+			typedef typename vertex_array_type::primitive_type triangle_type;
 
-			triangle_single_pixel(gbuffer & _gbuf)
+			gbuffer & gbuf;
+			const vertex_array_type m;
+
+			triangle_single_pixel(const vertex_array_type object, gbuffer & _gbuf)
 			:
-					gbuf(_gbuf)
+					gbuf(_gbuf),
+					m(object)
 			{}
 
-			bool operator()(int x, int y, const triangle * ptri) {
+			bool operator()(int x, int y, const triangle_type * ptri) {
 				size_t coords = coord2d(x,y);
 				float z = ptri->pv[0]->z; // 1 Pixel no meaning for median
 
@@ -62,13 +74,13 @@ namespace thrender {
 					return true;
 
 				glm::vec4 color =
-						ptri->m->attributes.colors[ptri->indices[0]] * (1.0f/3.0f)+
-						ptri->m->attributes.colors[ptri->indices[1]] * (1.0f/3.0f)+
-						ptri->m->attributes.colors[ptri->indices[2]] * (1.0f/3.0f);
+						ATTRIBUTE(m.attributes[ptri->indices[0]], COLOR) * (1.0f/3.0f)+
+						ATTRIBUTE(m.attributes[ptri->indices[1]], COLOR) * (1.0f/3.0f)+
+						ATTRIBUTE(m.attributes[ptri->indices[2]], COLOR) * (1.0f/3.0f);
 				glm::vec4 normal =
-						ptri->m->attributes.normals[ptri->indices[0]] * (1.0f/3.0f)+
-						ptri->m->attributes.normals[ptri->indices[1]] * (1.0f/3.0f)+
-						ptri->m->attributes.normals[ptri->indices[2]] * (1.0f/3.0f);
+						ATTRIBUTE(m.attributes[ptri->indices[0]], NORMAL) * (1.0f/3.0f)+
+						ATTRIBUTE(m.attributes[ptri->indices[1]], NORMAL) * (1.0f/3.0f)+
+						ATTRIBUTE(m.attributes[ptri->indices[2]], NORMAL) * (1.0f/3.0f);
 
 				gbuf.depth[coords] = z;
 				gbuf.diffuse[coords] = color;
@@ -77,21 +89,28 @@ namespace thrender {
 			}
 		};
 
+	template<class VertexArrayType>
 	struct fragment_processor_kernel {
 
-		gbuffer & gbuf;
-		triangle_interpolate_draw_pixel pix_op;
-		triangle_single_pixel singlepix_op;
+		typedef VertexArrayType vertex_array_type;
 
-		fragment_processor_kernel(gbuffer & _gbuf)
+		typedef typename vertex_array_type::primitive_type triangle_type;
+
+		gbuffer & gbuf;
+		triangle_interpolate_draw_pixel<vertex_array_type> pix_op;
+		triangle_single_pixel<vertex_array_type> singlepix_op;
+		const vertex_array_type & object;
+
+		fragment_processor_kernel(const vertex_array_type & _object, gbuffer & _gbuf)
 		:
 			gbuf(_gbuf),
-			pix_op(gbuf),
-			singlepix_op(gbuf)
+			pix_op(_object, gbuf),
+			singlepix_op(_object, gbuf),
+			object(_object)
 		{
 		}
 
-		void operator()(const triangle & tr)  {
+		void operator()(const triangle_type & tr)  {
 
 			//if (m.render_buffer.discard_vertices[tr.x] || m.render_buffer.discard_vertices[tr.y]
 							//|| m.render_buffer.discard_vertices[tr.z])
@@ -128,10 +147,11 @@ namespace thrender {
 	};
 
 	// Rasterization of fragments/primitives
-	void process_fragments(const thrust::host_vector<triangle> & triangles, render_state & rstate) {
+	template<class Attributes>
+	void process_fragments(const vertex_array<Attributes> & object, render_state & rstate) {
 		thrust::for_each(
-				triangles.begin(),
-				triangles.end(),
-				fragment_processor_kernel(rstate.gbuff));
+				object.render_buffer.triangles.begin(),
+				object.render_buffer.triangles.end(),
+				fragment_processor_kernel<vertex_array<Attributes> >(object, rstate.gbuff));
 	}
 }

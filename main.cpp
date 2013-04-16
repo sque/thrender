@@ -202,8 +202,10 @@ void render() {
 	thrender::gbuffer gbuff(640, 480);
 	gbuff.set_clear_diffuse(glm::vec4(0, 0, 0, 1));
 
-	thrender::mesh tux = thrender::utils::load_model("/home/sque/Downloads/cube.ply");
-	thrust::host_vector<thrender::triangle>::iterator it;
+	typedef thrender::vertex_array<thrust::tuple<glm::vec4, glm::vec4, glm::vec4> > mesh_type;
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/cube.ply");
+
+	//thrust::host_vector<thrender::triangle>::iterator it;
 	thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
 
 	thrender::render_state rstate(cam, gbuff);
@@ -213,26 +215,27 @@ void render() {
 		prof.reset();
 		gbuff.clear();
 		prof.checkpoint("Clear buffer");
-		thrender::process_vertices<thrender::shaders::default_vertex_shader>(tux, rstate);
+		thrender::process_vertices< thrender::shaders::default_vertex_shader<mesh_type> >(tux, rstate);
 		prof.checkpoint("Process vertices");
-		thrender::process_fragments(tux.render_buffer.triangles, rstate);
+		thrender::process_fragments(tux, rstate);
 		prof.checkpoint("Process fragments");
 		upload_images(gbuff);
 		prof.checkpoint("Upload images");
 
-		tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
+		//tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
 		cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,0));
 		std::cout << prof.report() << std::endl;
 
-		lock_fps.keep_frame_rate();
+		//lock_fps.keep_frame_rate();
 	}
 
 	std::ofstream myfile;
 	myfile.open("pixels.txt");
-	for (it = tux.render_buffer.triangles.begin(); it != tux.render_buffer.triangles.end(); it++) {
+/*	for (it = tux.render_buffer.triangles.begin(); it != tux.render_buffer.triangles.end(); it++) {
 		thrender::triangle & f = *it;
 		myfile << glm::to_string(f.bounding_box()) << std::endl;
 	}
+*/
 	myfile.close();
 
 	std::cout << "pixels written" << std::endl;

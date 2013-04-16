@@ -10,17 +10,18 @@
 
 namespace thrender {
 
-	//! Buffer needed per mesh for intermediate processing
+	//! Buffer needed per vertex for intermediate processing
 	template<class VertexArrayType>
 	struct vertex_array_intermediate_buffer {
 
+		//! Type of vertex_array object
 		typedef VertexArrayType vertex_array_type;
 
+		//! Type of vertex_array attributes
 		typedef typename vertex_array_type::attributes_type attributes_type;
 
+		//! Type of processed vertices vector
 		typedef thrust::host_vector<attributes_type> processed_vertices_type;
-
-
 
 		//! Type of discarded vertices
 		typedef thrust::host_vector<bool> discarded_vertices_type;
@@ -30,7 +31,7 @@ namespace thrender {
 		//! Type of
 		typedef thrust::host_vector< triangle_type > triangles_vector;
 
-		//! A vector with all projected vertices
+		//! A vector with all processed vertices
 		processed_vertices_type processed_vertices;
 
 		//! A bitmap with all discarded vertices
@@ -91,6 +92,10 @@ namespace thrender {
 		// Triangle indices
 		thrust::host_vector<glm::ivec3> triangles;
 
+		//! Primitive data type (triangle)
+		typedef triangle<attributes_type> primitive_type;
+
+		//! Resize the array vector
 		void resize(size_t vectors_sz, size_t triangles_sz) {
 			attributes.resize(vectors_sz);
 			triangles.resize(triangles_sz);
@@ -107,7 +112,7 @@ namespace thrender {
 		}
 
 		//! Get the total number of attributes
-		size_t total_attributes() const {
+		static size_t total_attributes() {
 			return thrust::tuple_size<attributes_type>::value;
 		}
 
@@ -119,8 +124,11 @@ namespace thrender {
 
 //! Helper macro to access a given attribute on vertex
 #define ATTRIBUTE(attr_list, id) \
-	thrust::get<id>(attr_list);
+	thrust::get<id>(attr_list)
 
 //! The first attribute of all vertices is position
 #define POSITION 0
+#define NORMAL 1
+#define COLOR 2
+#define UV 3
 };
