@@ -12,7 +12,7 @@ namespace thrender {
 	struct triangle_interpolate_draw_pixel {
 
 		typedef VertexArrayType vertex_array_type;
-		typedef typename vertex_array_type::primitive_type triangle_type;
+		typedef typename vertex_array_type::triangle_type triangle_type;
 
 		gbuffer & gbuf;
 		const vertex_array_type & m;
@@ -55,7 +55,7 @@ namespace thrender {
 	struct triangle_single_pixel {
 
 			typedef VertexArrayType vertex_array_type;
-			typedef typename vertex_array_type::primitive_type triangle_type;
+			typedef typename vertex_array_type::triangle_type triangle_type;
 
 			gbuffer & gbuf;
 			const vertex_array_type m;
@@ -94,7 +94,7 @@ namespace thrender {
 
 		typedef VertexArrayType vertex_array_type;
 
-		typedef typename vertex_array_type::primitive_type triangle_type;
+		typedef typename vertex_array_type::triangle_type triangle_type;
 
 		gbuffer & gbuf;
 		triangle_interpolate_draw_pixel<vertex_array_type> pix_op;

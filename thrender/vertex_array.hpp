@@ -26,9 +26,10 @@ namespace thrender {
 		//! Type of discarded vertices
 		typedef thrust::host_vector<bool> discarded_vertices_type;
 
+		//! Type of triangle
 		typedef triangle<attributes_type> triangle_type;
 
-		//! Type of
+		//! Type of triangle vector
 		typedef thrust::host_vector< triangle_type > triangles_vector;
 
 		//! A vector with all processed vertices
@@ -93,7 +94,7 @@ namespace thrender {
 		thrust::host_vector<glm::ivec3> triangles;
 
 		//! Primitive data type (triangle)
-		typedef triangle<attributes_type> primitive_type;
+		typedef triangle<attributes_type> triangle_type;
 
 		//! Resize the array vector
 		void resize(size_t vectors_sz, size_t triangles_sz) {

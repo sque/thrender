@@ -9,23 +9,29 @@ namespace thrender {
 	template<class A>
 	struct vertex_array;
 
-	// Triangle primitive
+	//! Triangle primitive
 	template <class AttributeType>
 	struct triangle {
 
-		typedef AttributeType attribute_type;
+		//! Type of vertex attribute
+		typedef AttributeType attributes_type;
 
+		//! Vector indices
 		size_t indices[3];
 
+		//! Pointer to position attributes
 		const glm::vec4 * pv[3];
-		const thrust::host_vector<attribute_type> (*processed_vertices);
 
+		//! Pointer to processed vertices list
+		const thrust::host_vector<attributes_type> (*processed_vertices);
+
+		//! Triangle flags
 		struct {
 			bool discarded;
 		} flags;
 
 		//! Construct a new triangle
-		triangle(const thrust::host_vector<attribute_type> & _processed_vertices,
+		triangle(const thrust::host_vector<attributes_type> & _processed_vertices,
 				size_t iv0,
 				size_t iv1,
 				size_t iv2,
@@ -54,7 +60,7 @@ namespace thrender {
 			return true;
 		}
 
-		//! Get the size of the smallest bounding box that fits this triangle
+		//! Calculate the size of the smallest bounding box that fits this triangle
 		glm::vec2 bounding_box() const {
 			float x_max = std::max(std::max(pv[0]->x, pv[1]->x), pv[2]->x);
 			float x_min = std::min(std::min(pv[0]->x, pv[1]->x), pv[2]->x);

@@ -15,13 +15,14 @@ namespace shaders {
 	template<class VertexArray>
 	struct default_vertex_shader {
 
-		//! Type of object
-		typedef VertexArray object_type;
+		//! Type of vertex_array
+		typedef VertexArray vertex_array_type;
 
-		typedef typename object_type::attributes_type attributes_type;
+		//! Type of attributes per vertex
+		typedef typename vertex_array_type::attributes_type attributes_type;
 
 		//! Reference to object
-		object_type & object;
+		vertex_array_type & object;
 
 		//! Reference to render state
 		render_state & rstate;
@@ -33,7 +34,7 @@ namespace shaders {
 		unsigned half_width;
 		unsigned half_height;
 
-		default_vertex_shader(const glm::mat4 & _mvp, object_type & _object, render_state & _rstate) :
+		default_vertex_shader(const glm::mat4 & _mvp, vertex_array_type & _object, render_state & _rstate) :
 			object(_object),
 			rstate(_rstate),
 			mvp(_mvp)
@@ -44,9 +45,9 @@ namespace shaders {
 
 		attributes_type operator()(const attributes_type & vin, size_t index) {
 
-			const glm::vec4 &	posIn =  ATTRIBUTE(vin, POSITION);
+			const glm::vec4 & posIn = ATTRIBUTE(vin, POSITION);
 			attributes_type vout(vin);
-			glm::vec4 &	posOut = ATTRIBUTE(vout, POSITION);
+			glm::vec4 & posOut = ATTRIBUTE(vout, POSITION);
 			posOut = mvp * posIn;
 			// clip coordinates
 
@@ -65,7 +66,6 @@ namespace shaders {
 			return vout;
 		}
 	};
-
 }
 
 	//! Process vertices and extract projected on window space
@@ -74,7 +74,7 @@ namespace shaders {
 
 		m.render_buffer.reset();
 		glm::mat4 mvp_mat(1.0f);
-		mvp_mat = rstate.cam.projection_mat * rstate.cam.view_mat /** m.model_mat*/;
+		mvp_mat = rstate.cam.projection_mat * rstate.cam.view_mat/* * m.model_mat*/;
 
 		// For all vertex attributes, process them
 		thrust::transform(

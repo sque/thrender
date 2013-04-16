@@ -70,7 +70,7 @@ namespace thrender {
 			memcpy(&normal[0], &clear_normal[0], clear_normal.size()*sizeof(normal_vector::value_type));
 			memcpy(&depth[0], &clear_depth[0], clear_depth.size()*sizeof(depth_vector::value_type));
 			*/
-			// 64ms copy (Debug) ~7ms (Debug)
+			// 64ms copy (Debug) ~7ms (Release)
 			/*thrust::copy(clear_diffuse.begin(), clear_diffuse.end(), diffuse.begin());
 			thrust::copy(clear_normal.begin(), clear_normal.end(), normal.begin());
 			thrust::copy(clear_depth.begin(), clear_depth.end(), depth.begin());
