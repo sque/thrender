@@ -14,19 +14,19 @@
 #include <thrust/iterator/constant_iterator.h>
 #include <iostream>
 #include <fstream>
-#include "perf_timer.hpp"
-#include <SDL/SDL.h>
+
+#include <SDL.h>
 #include "thrender/thrender.hpp"
 #include "thrender/utils/mesh.hpp"
 #include "thrender/utils/to_string.hpp"
 #include "thrender/utils/frame_rate_keeper.hpp"
-
+#include "thrender/utils/profiler.hpp"
 
 #define PI	3.141593
 #define HPI	(PI / 2.0f)
 #define PI2	(2 * PI)
 
-typedef perf_timer<boost::chrono::high_resolution_clock> timer;
+
 SDL_Window * window;
 SDL_Renderer * renderer;
 SDL_Texture * tex_diffuse;
@@ -198,30 +198,35 @@ void upload_images(thrender::gbuffer & gbuf) {
 
 void render() {
 
-	timer tm;
+	typedef thrender::utils::plain_timer<boost::chrono::high_resolution_clock> timer;
+	//timer tm;
 	thrender::gbuffer gbuff(640, 480);
 	gbuff.set_clear_diffuse(glm::vec4(0, 0, 0, 1));
 
 	typedef thrender::vertex_array<thrust::tuple<glm::vec4, glm::vec4, glm::vec4> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/tux__.ply");
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/tux__.ply");
 
 	//thrust::host_vector<thrender::triangle>::iterator it;
 	thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
 
 	thrender::render_state rstate(cam, gbuff);
-	thrender::utils::frame_rate_keeper<> lock_fps(10);
-	profiler<boost::chrono::high_resolution_clock> prof("Render procedure");
-	for (int i = 1; i < 150000; i++) {
-		prof.reset();
-		gbuff.clear();
-		prof.checkpoint("Clear buffer");
-		thrender::process_vertices< thrender::shaders::default_vertex_shader<mesh_type> >(tux, rstate);
-		prof.checkpoint("Process vertices");
-		thrender::process_fragments(tux, rstate);
-		prof.checkpoint("Process fragments");
-		upload_images(gbuff);
-		prof.checkpoint("Upload images");
 
+	thrender::utils::frame_rate_keeper<> lock_fps(10);
+	thrender::utils::profiler<boost::chrono::high_resolution_clock> prof("Render procedure");
+	for (int i = 1; i < 150000; i++) {
+		prof.clear();
+		{	PROFILE_BLOCK(prof, "Clear buffer");
+			gbuff.clear();
+		}
+		{	PROFILE_BLOCK(prof, "Process vertices");
+			thrender::process_vertices< thrender::shaders::default_vertex_shader<mesh_type> >(tux, rstate);
+		}
+		{	PROFILE_BLOCK(prof, "Process fragments");
+			thrender::process_fragments(tux, rstate);
+		}
+		{	PROFILE_BLOCK(prof, "Upload images");
+			upload_images(gbuff);
+		}
 		//tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
 		cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,0));
 		std::cout << prof.report() << std::endl;

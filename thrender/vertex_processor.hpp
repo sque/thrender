@@ -3,7 +3,7 @@
 #include "./render_state.hpp"
 #include "./camera.hpp"
 #include "./vertex_array.hpp"
-#include "./shaders/default_vertex.hpp"
+//#include "./shaders/default_vertex.hpp"
 #include <thrust/iterator/zip_iterator.h>
 #include <boost/tuple/tuple.hpp>
 
@@ -44,9 +44,9 @@ namespace shaders {
 		}
 
 		attributes_type operator()(const attributes_type & vin, size_t index) {
+			attributes_type vout(vin);
 
 			const glm::vec4 & posIn = ATTRIBUTE(vin, POSITION);
-			attributes_type vout(vin);
 			glm::vec4 & posOut = ATTRIBUTE(vout, POSITION);
 			posOut = mvp * posIn;
 			// clip coordinates
