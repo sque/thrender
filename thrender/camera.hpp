@@ -7,9 +7,12 @@ namespace thrender {
 
 	//! Base camera object
 	struct camera {
+
+		//! Projection matrix of camera
 		glm::mat4 projection_mat;
+
+		//! View matrix of camera
 		glm::mat4 view_mat;
-		glm::vec3 position;
 
 		//! Construct camera
 		/**
@@ -19,10 +22,17 @@ namespace thrender {
 		 * @param near Near clipping plane in the z-axis
 		 * @param far Far clipping plane in the z-axis
 		 */
-		camera(glm::vec3 pos, float fov, float aspect_ratio, float near, float far) :
-			position(pos){
+		camera(glm::vec3 pos, float fov, float aspect_ratio, float near, float far){
 			projection_mat = glm::perspective(fov, aspect_ratio, near, far);
-			view_mat = glm::lookAt(position, glm::vec3(0,0,0), glm::vec3(0,1,0));
+			view_mat = glm::lookAt(pos, glm::vec3(0,0,0), glm::vec3(0,1,0));
+		}
+
+		//! Get the position of camera (World-Space)
+		/**
+		 * It is extracted from view matrix.
+		 */
+		glm::vec3 position() const {
+			return glm::vec3(view_mat[0][3], view_mat[1][3], view_mat[2][3])/view_mat[3][3];
 		}
 
 	};
