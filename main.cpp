@@ -202,7 +202,10 @@ void render() {
 	thrender::gbuffer gbuff(640, 480);
 	gbuff.set_clear_diffuse(glm::vec4(0, 0, 0, 1));
 
-	typedef thrender::vertex_array<thrust::tuple<glm::vec4, glm::vec4, glm::vec4> > mesh_type;
+	typedef thrender::vertex_array<thrust::tuple<
+			glm::vec4,
+			glm::vec4,
+			glm::vec4> > mesh_type;
 	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/tux__.ply");
 
 	//thrust::host_vector<thrender::triangle>::iterator it;

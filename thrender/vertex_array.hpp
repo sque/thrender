@@ -123,8 +123,15 @@ namespace thrender {
 		}
 	};
 
+#define VA_VERTEX_BEGIN() \
+	thrust::tuple<
+#define VA_ATTRIBUsTE(type) \
+	type,
+#define VA_VERTEX_END(type_name) \
+	> ntype_name;
+
 //! Helper macro to access a given attribute on vertex
-#define ATTRIBUTE(attr_list, id) \
+#define VA_ATTRIBUTE(attr_list, id) \
 	thrust::get<id>(attr_list)
 
 //! The first attribute of all vertices is position

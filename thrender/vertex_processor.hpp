@@ -30,7 +30,7 @@ namespace shaders {
 		//! Model view projection matrix
 		const glm::mat4 & mvp;
 
-		// To be reviewd
+		// To be reviewed
 		unsigned half_width;
 		unsigned half_height;
 
@@ -43,11 +43,13 @@ namespace shaders {
 			half_height = rstate.gbuff.height / 2;
 		}
 
-		attributes_type operator()(const attributes_type & vin, size_t index) {
+		//attributes_type operator()(const attributes_type & vin, size_t index) {
+		void operator()(thrust::zip_iterator<thrust::tuple<const attributes_type, attributes_type> > & v){
+			const attributes_type & vin = thrust::get<0>(v);
+			attributes_type & vout = thrust::get<1>(v);
+			const glm::vec4 & posIn = VA_ATTRIBUTE(vin, POSITION);
 
-			const glm::vec4 & posIn = ATTRIBUTE(vin, POSITION);
-			attributes_type vout(vin);
-			glm::vec4 & posOut = ATTRIBUTE(vout, POSITION);
+			glm::vec4 & posOut = VA_ATTRIBUTE(vout, POSITION);
 			posOut = mvp * posIn;
 			// clip coordinates
 
@@ -62,8 +64,8 @@ namespace shaders {
 			// Discard vertices
 			// FIXME: Add z clipping
 			if (posOut.x >= rstate.gbuff.width || posOut.x < 0 || posOut.y > rstate.gbuff.height || posOut.y < 0)
-				object.render_buffer.discarded_vertices[index] = true;
-			return vout;
+				object.render_buffer.discarded_vertices[0] = true;
+			return;
 		}
 	};
 }
@@ -77,10 +79,18 @@ namespace shaders {
 		mvp_mat = rstate.cam.projection_mat * rstate.cam.view_mat/* * m.model_mat*/;
 
 		// For all vertex attributes, process them
-		thrust::transform(
+		/*thrust::transform(
 			m.attributes.begin(), m.attributes.end(),		// Input 1
 			thrust::counting_iterator<size_t>(0),			// Input 3
 			m.render_buffer.processed_vertices.begin(),		// Output
-			VertexShader(mvp_mat, m, rstate));				// Operation
+			VertexShader(mvp_mat, m, rstate));				// Operation*/
+
+		thrust::for_each(
+			thrust::make_zip_iterator(thrust::make_tuple(m.attributes.begin(), m.render_buffer.processed_vertices.begin())),
+			thrust::make_zip_iterator(thrust::make_tuple(m.attributes.end(), m.render_buffer.processed_vertices.end())),
+			/*m.attributes.begin(), m.attributes.end(),		// Input 1
+			thrust::counting_iterator<size_t>(0),			// Input 3
+			m.render_buffer.processed_vertices.begin(),		// Output*/
+			VertexShader(mvp_mat, m, rstate));				// Operation*
 	}
 }

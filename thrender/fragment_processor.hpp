@@ -36,13 +36,13 @@ namespace thrender {
 				return true;
 
 			glm::vec4 color =
-					ATTRIBUTE(m.attributes[ptri->indices[0]], COLOR) * lamdas.x+
-					ATTRIBUTE(m.attributes[ptri->indices[1]], COLOR) * lamdas.y+
-					ATTRIBUTE(m.attributes[ptri->indices[2]], COLOR) * lamdas.z;
+					VA_ATTRIBUTE(m.attributes[ptri->indices[0]], COLOR) * lamdas.x+
+					VA_ATTRIBUTE(m.attributes[ptri->indices[1]], COLOR) * lamdas.y+
+					VA_ATTRIBUTE(m.attributes[ptri->indices[2]], COLOR) * lamdas.z;
 			glm::vec4 normal =
-					ATTRIBUTE(m.attributes[ptri->indices[0]], NORMAL) * lamdas.x+
-					ATTRIBUTE(m.attributes[ptri->indices[1]], NORMAL) * lamdas.y+
-					ATTRIBUTE(m.attributes[ptri->indices[2]], NORMAL) * lamdas.z;
+					VA_ATTRIBUTE(m.attributes[ptri->indices[0]], NORMAL) * lamdas.x+
+					VA_ATTRIBUTE(m.attributes[ptri->indices[1]], NORMAL) * lamdas.y+
+					VA_ATTRIBUTE(m.attributes[ptri->indices[2]], NORMAL) * lamdas.z;
 
 			gbuf.depth[coords] = z;
 			gbuf.diffuse[coords] = color;
@@ -74,13 +74,13 @@ namespace thrender {
 					return true;
 
 				glm::vec4 color =
-						ATTRIBUTE(m.attributes[ptri->indices[0]], COLOR) * (1.0f/3.0f)+
-						ATTRIBUTE(m.attributes[ptri->indices[1]], COLOR) * (1.0f/3.0f)+
-						ATTRIBUTE(m.attributes[ptri->indices[2]], COLOR) * (1.0f/3.0f);
+						VA_ATTRIBUTE(m.attributes[ptri->indices[0]], COLOR) * (1.0f/3.0f)+
+						VA_ATTRIBUTE(m.attributes[ptri->indices[1]], COLOR) * (1.0f/3.0f)+
+						VA_ATTRIBUTE(m.attributes[ptri->indices[2]], COLOR) * (1.0f/3.0f);
 				glm::vec4 normal =
-						ATTRIBUTE(m.attributes[ptri->indices[0]], NORMAL) * (1.0f/3.0f)+
-						ATTRIBUTE(m.attributes[ptri->indices[1]], NORMAL) * (1.0f/3.0f)+
-						ATTRIBUTE(m.attributes[ptri->indices[2]], NORMAL) * (1.0f/3.0f);
+						VA_ATTRIBUTE(m.attributes[ptri->indices[0]], NORMAL) * (1.0f/3.0f)+
+						VA_ATTRIBUTE(m.attributes[ptri->indices[1]], NORMAL) * (1.0f/3.0f)+
+						VA_ATTRIBUTE(m.attributes[ptri->indices[2]], NORMAL) * (1.0f/3.0f);
 
 				gbuf.depth[coords] = z;
 				gbuf.diffuse[coords] = color;
