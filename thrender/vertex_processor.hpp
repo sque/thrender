@@ -1,5 +1,6 @@
 #pragma once
 
+#include "./types.hpp"
 #include "./render_context.hpp"
 #include "./camera.hpp"
 #include "./renderable.hpp"
@@ -20,7 +21,7 @@ namespace thrender {
 		typedef RenderableType renderable_type;
 
 		//! The id of this vertex
-		size_t vertex_id;
+		vertex_id_t vertex_id;
 
 		//! Reference to the owner object
 		const renderable_type & object;
@@ -146,7 +147,7 @@ namespace shaders {
 
 		// Process vertices
 		size_t total_vertices = object.vertices.size();
-		thrust::counting_iterator<size_t> count_begin(0);
+		thrust::counting_iterator<vertex_id_t> count_begin(0);
 		thrust::for_each(
 			thrust::make_zip_iterator(thrust::make_tuple(object.vertices.cbegin(), object.intermediate_buffer.processed_vertices.begin(), count_begin)),
 			thrust::make_zip_iterator(thrust::make_tuple(object.vertices.cend(), object.intermediate_buffer.processed_vertices.end(), count_begin + total_vertices)),
