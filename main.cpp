@@ -17,7 +17,7 @@
 
 #include <SDL.h>
 #include "thrender/thrender.hpp"
-#include "thrender/utils/mesh.hpp"
+#include "thrender/utils/io.hpp"
 #include "thrender/utils/to_string.hpp"
 #include "thrender/utils/frame_rate_keeper.hpp"
 #include "thrender/utils/profiler.hpp"
@@ -99,7 +99,7 @@ void render() {
 	thrender::gbuffer gbuff(640, 480);
 	gbuff.set_clear_diffuse(glm::vec4(0, 0, 0, 1));
 
-	typedef thrender::vertex_array<thrust::tuple<
+	typedef thrender::rendable<thrust::tuple<
 			glm::vec4,
 			glm::vec4,
 			glm::vec4> > mesh_type;
@@ -124,10 +124,10 @@ void render() {
 			thrender::process_fragments(tux, rstate);
 		}*/
 		{	PROFILE_BLOCK(prof, "Upload images");
-			upload_images(gbuff);
+			//upload_images(gbuff);
 		}
 		//tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
-		cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,1));
+		//cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,1));
 		std::cout << prof.report() << std::endl;
 
 		//lock_fps.keep_frame_rate();

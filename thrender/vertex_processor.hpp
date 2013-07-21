@@ -2,7 +2,7 @@
 
 #include "./render_state.hpp"
 #include "./camera.hpp"
-#include "./vertex_array.hpp"
+#include "./rendable.hpp"
 //#include "./shaders/default_vertex.hpp"
 #include <thrust/iterator/zip_iterator.h>
 #include <boost/tuple/tuple.hpp>
@@ -12,17 +12,17 @@ namespace shaders {
 
 
 	//! Default vertex shader
-	template<class VertexArray>
+	template<class RendableType>
 	struct default_vertex_shader {
 
-		//! Type of vertex_array
-		typedef VertexArray vertex_array_type;
+		//! Type of rendable object
+		typedef RendableType rendable_type;
 
-		//! Type of attributes per vertex
-		typedef typename vertex_array_type::attributes_type attributes_type;
+		//! Type of vertex
+		typedef typename rendable_type::vertex_type vertex_type;
 
 		//! Reference to object
-		vertex_array_type & object;
+		rendable_type & object;
 
 		//! Reference to render state
 		render_state & rstate;
@@ -34,7 +34,7 @@ namespace shaders {
 		unsigned half_width;
 		unsigned half_height;
 
-		default_vertex_shader(const glm::mat4 & _mvp, vertex_array_type & _object, render_state & _rstate) :
+		default_vertex_shader(const glm::mat4 & _mvp, rendable_type & _object, render_state & _rstate) :
 			object(_object),
 			rstate(_rstate),
 			mvp(_mvp)
@@ -44,9 +44,10 @@ namespace shaders {
 		}
 
 		//attributes_type operator()(const attributes_type & vin, size_t index) {
-		void operator()(thrust::zip_iterator<thrust::tuple<const attributes_type, attributes_type> > & v){
-			const attributes_type & vin = thrust::get<0>(v);
-			attributes_type & vout = thrust::get<1>(v);
+		template<class T>
+		void operator()(T & v){
+			const vertex_type & vin = thrust::get<0>(v);
+			vertex_type & vout = thrust::get<1>(v);
 			const glm::vec4 & posIn = VA_ATTRIBUTE(vin, POSITION);
 
 			glm::vec4 & posOut = VA_ATTRIBUTE(vout, POSITION);
@@ -65,7 +66,7 @@ namespace shaders {
 			// Discard vertices
 			// FIXME: Add z clipping
 			if (posOut.x >= rstate.gbuff.width || posOut.x < 0 || posOut.y > rstate.gbuff.height || posOut.y < 0)
-				object.render_buffer.discarded_vertices[0] = true;
+				object.intermediate_buffer.discarded_vertices[0] = true;
 			return;
 		}
 	};
@@ -75,7 +76,7 @@ namespace shaders {
 	template<class VertexShader, class VertexArray>
 	void process_vertices(VertexArray & m, render_state & rstate) {
 
-		m.render_buffer.reset();
+		m.prepare_for_rendering();
 		glm::mat4 mvp_mat(1.0f);
 		mvp_mat = rstate.cam.projection_mat * rstate.cam.view_mat/* * m.model_mat*/;
 
@@ -87,8 +88,8 @@ namespace shaders {
 			VertexShader(mvp_mat, m, rstate));				// Operation*/
 
 		thrust::for_each(
-			thrust::make_zip_iterator(thrust::make_tuple(m.attributes.begin(), m.render_buffer.processed_vertices.begin())),
-			thrust::make_zip_iterator(thrust::make_tuple(m.attributes.end(), m.render_buffer.processed_vertices.end())),
+			thrust::make_zip_iterator(thrust::make_tuple(m.vertices.cbegin(), m.intermediate_buffer.processed_vertices.begin())),
+			thrust::make_zip_iterator(thrust::make_tuple(m.vertices.cend(), m.intermediate_buffer.processed_vertices.end())),
 			/*m.attributes.begin(), m.attributes.end(),		// Input 1
 			thrust::counting_iterator<size_t>(0),			// Input 3
 			m.render_buffer.processed_vertices.begin(),		// Output*/

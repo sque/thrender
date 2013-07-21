@@ -7,7 +7,7 @@
 namespace thrender {
 
 	template<class A>
-	struct vertex_array;
+	struct vertex_array_type;
 
 	//! Triangle primitive
 	template <class VertexType>

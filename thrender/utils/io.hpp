@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../vertex_array.hpp"
+#include "../rendable.hpp"
 #include <assimp/Importer.hpp> // C++ importer interface
 #include <assimp/scene.h> 		// Output data structure
 #include <assimp/postprocess.h> // Post processing flags
@@ -42,31 +42,30 @@ namespace utils {
 		}
 
 		// Load mesh from file
-
 		const aiMesh * m = scene->mMeshes[0];
 		MeshType outm(m->mNumVertices, m->mNumFaces);
-		MeshType::vertex_array_type
+
 		boost::random::mt19937 rng;
 		boost::random::uniform_real_distribution<> one(0,1);
 
 		for(unsigned i = 0;i < m->mNumVertices;i++){
-			VA_ATTRIBUTE(outm.attributes[i], POSITION) = glm::vec4(glm::make_vec3(&m->mVertices[i].x),1);
-			VA_ATTRIBUTE(outm.attributes[i], NORMAL) =  glm::vec4(glm::make_vec3(&m->mNormals[i].x),1);
+			VA_ATTRIBUTE(outm.vertices[i], POSITION) = glm::vec4(glm::make_vec3(&m->mVertices[i].x),1);
+			VA_ATTRIBUTE(outm.vertices[i], NORMAL) =  glm::vec4(glm::make_vec3(&m->mNormals[i].x),1);
 			if (m->HasVertexColors(0))
-				VA_ATTRIBUTE(outm.attributes[i], COLOR) = glm::make_vec4(&m->mColors[i]->r);
+				VA_ATTRIBUTE(outm.vertices[i], COLOR) = glm::make_vec4(&m->mColors[i]->r);
 			else
-				VA_ATTRIBUTE(outm.attributes[i], COLOR) = glm::vec4(one(rng), one(rng), one(rng), 1.0f);
+				VA_ATTRIBUTE(outm.vertices[i], COLOR) = glm::vec4(one(rng), one(rng), one(rng), 1.0f);
 		}
 
 		for(unsigned i = 0;i < m->mNumFaces;i++){
-			outm.triangles[i] = glm::ivec3(
+			outm.element_indices[i] = glm::ivec3(
 				m->mFaces[i].mIndices[0],
 				m->mFaces[i].mIndices[1],
 				m->mFaces[i].mIndices[2]
 				);
 			}
 
-		outm.post_update();
 		return outm;
 	}
 }}
+
