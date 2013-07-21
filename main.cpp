@@ -99,8 +99,11 @@ void render() {
 	thrender::gbuffer gbuff(640, 480);
 	gbuff.set_clear_diffuse(glm::vec4(0, 0, 0, 1));
 
-	typedef thrender::mesh<thrust::tuple<glm::vec4, glm::vec4, glm::vec4> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/tux__.ply");
+	typedef thrender::vertex_array<thrust::tuple<
+			glm::vec4,
+			glm::vec4,
+			glm::vec4> > mesh_type;
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/tux__.ply");
 
 	//thrust::host_vector<thrender::triangle>::iterator it;
 	thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
