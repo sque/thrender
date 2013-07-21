@@ -13,7 +13,7 @@ namespace thrender {
 		render_state & rstate;
 
 		primitives_proc_kernel(const thrust::host_vector<glm::vec4> & v,
-				const thrender::mesh & _m, thrender::render_state & _rstate) :
+				const mesh & _m, thrender::render_state & _rstate) :
 				m(_m), ws_vertices(v), rstate(_rstate) {
 		}
 

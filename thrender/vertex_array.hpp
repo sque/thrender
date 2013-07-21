@@ -10,6 +10,7 @@
 
 namespace thrender {
 
+namespace details {
 	//! Buffer needed per vertex for intermediate processing
 	template<class VertexArrayType>
 	struct vertex_array_intermediate_buffer {
@@ -17,23 +18,20 @@ namespace thrender {
 		//! Type of vertex_array object
 		typedef VertexArrayType vertex_array_type;
 
-		//! Type of vertex_array attributes
-		typedef typename vertex_array_type::attributes_type attributes_type;
-
-		//! Type of processed vertices vector
-		typedef thrust::host_vector<attributes_type> processed_vertices_type;
+		//! Type of a vertex in array
+		typedef typename vertex_array_type::vertex_type vertex_type;
 
 		//! Type of discarded vertices
 		typedef thrust::host_vector<bool> discarded_vertices_type;
 
 		//! Type of triangle
-		typedef triangle<attributes_type> triangle_type;
+		typedef triangle<vertex_type> triangle_type;
 
 		//! Type of triangle vector
 		typedef thrust::host_vector< triangle_type > triangles_vector;
 
 		//! A vector with all processed vertices
-		processed_vertices_type processed_vertices;
+		vertex_array_type::vertices_type processed_vertices;
 
 		//! A bitmap with all discarded vertices
 		discarded_vertices_type discarded_vertices;
@@ -55,7 +53,7 @@ namespace thrender {
 			for(it_index = itriangles.begin();it_index != itriangles.end(); it_index++) {
 				glm::ivec3 & indices = *it_index;
 				triangles.push_back(
-					triangle<attributes_type>(
+					triangle<vertex_type>(
 						processed_vertices,
 						indices.x, indices.y, indices.z,
 						false)
@@ -63,6 +61,7 @@ namespace thrender {
 			}
 		}
 	};
+}; //! details
 
 	//! An array of vertices with each attributes
 	/**
@@ -71,56 +70,68 @@ namespace thrender {
 	 *
 	 * @param VertexAttributesTuple A thrust::tuple<> that holds
 	 * all attributes per vertex.
-	 *
-	 * @note Triangle should be separated, and permit rendering
-	 * of other primitives too.
 	 */
 	template<class VertexAttributesTuple>
 	struct vertex_array {
 
-		//! The type of vertex attribute
-		typedef VertexAttributesTuple attributes_type;
+		//! The type of vertex
+		typedef VertexAttributesTuple vertex_type;
 
 		//! The type of vector that hold all vertices
-		typedef thrust::host_vector<attributes_type> attributes_vector_type;
+		typedef thrust::host_vector<vertex_type> vertices_type;
 
-		//! All attributes packed together
-		attributes_vector_type attributes;
+		//! All vertices packed together
+		vertices_type vertices;
 
-		// Intermediate render buffer
-		vertex_array_intermediate_buffer< vertex_array<attributes_type> > render_buffer;
-
-		// Triangle indices
-		thrust::host_vector<glm::ivec3> triangles;
-
-		//! Primitive data type (triangle)
-		typedef triangle<attributes_type> triangle_type;
-
-		//! Resize the array vector
-		void resize(size_t vectors_sz, size_t triangles_sz) {
-			attributes.resize(vectors_sz);
-			triangles.resize(triangles_sz);
-		}
+		//! Construct and initialize the vector array
+		vertex_array(size_t vectors_sz)
+		:
+			vertices(vectors_sz)
+		{}
 
 		//! Get the total number of vertices
 		size_t total_vertices() const{
-			return attributes.size();
-		}
-
-		//! Get the total number of triangles
-		size_t total_triangles() const {
-			return triangles.size();
+			return vertices.size();
 		}
 
 		//! Get the total number of attributes
 		static size_t total_attributes() {
-			return thrust::tuple_size<attributes_type>::value;
+			return thrust::tuple_size<vertex_type>::value;
 		}
+	};
 
-		//! Action that must be called if mesh data are updated
-		void post_update() {
-			render_buffer.post_update(*this, total_vertices(), triangles);
-		}
+	template<class VertexAttributesTuple>
+	struct mesh {
+
+		//! Type of vertex attributes type
+		typedef VertexAttributesTuple attributes_type;
+
+		//! Type of vertex data
+		typedef vertex_array<attributes_type> vertex_array_type;
+
+		// Intermediate render buffer
+		details::vertex_array_intermediate_buffer< vertex_array_type > render_buffer;
+
+		//! Primitive data type (triangle)
+		typedef triangle<attributes_type> triangle_type;
+
+		//! Construct a new mesh, uninitialized
+		/**
+		 * All the storage will be reserved at construction time.
+		 * @param vertices_sz Total vertices that this mesh has
+		 * @param elements_sz Total elements that this mesh has
+		 */
+		mesh(size_t vertices_sz, size_t elements_sz) :
+			vertex_data(vertices_sz),
+			element_indices(elements_sz)
+		{}
+
+		//! Vertex data of this mesh
+		vertex_array_type vertex_data;
+
+		//! Indices of element vertices
+		thrust::host_vector<glm::ivec3> element_indices;
+
 	};
 
 //! Helper macro to access a given attribute on vertex

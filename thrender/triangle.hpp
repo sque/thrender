@@ -10,11 +10,11 @@ namespace thrender {
 	struct vertex_array;
 
 	//! Triangle primitive
-	template <class AttributeType>
+	template <class VertexType>
 	struct triangle {
 
-		//! Type of vertex attribute
-		typedef AttributeType attributes_type;
+		//! Type of vertex
+		typedef VertexType vertex_type;
 
 		//! Vector indices
 		size_t indices[3];
@@ -23,7 +23,7 @@ namespace thrender {
 		const glm::vec4 * pv[3];
 
 		//! Pointer to processed vertices list
-		const thrust::host_vector<attributes_type> (*processed_vertices);
+		const thrust::host_vector<vertex_type> (*processed_vertices);
 
 		//! Triangle flags
 		struct {
@@ -31,7 +31,7 @@ namespace thrender {
 		} flags;
 
 		//! Construct a new triangle
-		triangle(const thrust::host_vector<attributes_type> & _processed_vertices,
+		triangle(const thrust::host_vector<vertex_type> & _processed_vertices,
 				size_t iv0,
 				size_t iv1,
 				size_t iv2,
@@ -43,13 +43,13 @@ namespace thrender {
 			pv[0] = &thrust::get<0>((*processed_vertices)[iv0]);
 			pv[1] = &thrust::get<0>((*processed_vertices)[iv1]);
 			pv[2] = &thrust::get<0>((*processed_vertices)[iv2]);
-			flags.discarded = _discard || !ccw_winding_order();
+			flags.discarded = _discard || !is_ccw_winding_order();
 		}
 
 		triangle() {}
 
 		//! Check if triangle has Counter-Clock-Wise winding order
-		bool ccw_winding_order() const{
+		bool is_ccw_winding_order() const{
 			float adiff = atan2f(pv[1]->y - pv[0]->y, pv[1]->x - pv[0]->x)
 					- atan2f(pv[2]->y - pv[0]->y, pv[2]->x - pv[0]->x);
 			if (adiff < 0)

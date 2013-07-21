@@ -42,10 +42,10 @@ namespace utils {
 		}
 
 		// Load mesh from file
-		MeshType outm;
-		const aiMesh * m = scene->mMeshes[0];
-		outm.resize(m->mNumVertices, m->mNumFaces);
 
+		const aiMesh * m = scene->mMeshes[0];
+		MeshType outm(m->mNumVertices, m->mNumFaces);
+		MeshType::vertex_array_type
 		boost::random::mt19937 rng;
 		boost::random::uniform_real_distribution<> one(0,1);
 

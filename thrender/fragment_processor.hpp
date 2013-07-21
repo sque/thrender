@@ -8,11 +8,11 @@
 namespace thrender {
 
 	// Triangle interpolation with barycoords
-	template<class VertexArrayType>
+	template<class MeshType>
 	struct triangle_interpolate_draw_pixel {
 
-		typedef VertexArrayType vertex_array_type;
-		typedef typename vertex_array_type::triangle_type triangle_type;
+		typedef MeshType mesh_type;
+		typedef typename mesh_type::triangle_type triangle_type;
 
 		gbuffer & gbuf;
 		const vertex_array_type & m;
@@ -89,12 +89,12 @@ namespace thrender {
 			}
 		};
 
-	template<class VertexArrayType>
+	template<class Mesh>
 	struct fragment_processor_kernel {
 
-		typedef VertexArrayType vertex_array_type;
+		typedef Mesh mesh_type;
 
-		typedef typename vertex_array_type::triangle_type triangle_type;
+		typedef typename mesh_type::triangle_type triangle_type;
 
 		gbuffer & gbuf;
 		triangle_interpolate_draw_pixel<vertex_array_type> pix_op;
@@ -148,10 +148,10 @@ namespace thrender {
 
 	// Rasterization of fragments/primitives
 	template<class Attributes>
-	void process_fragments(const vertex_array<Attributes> & object, render_state & rstate) {
+	void process_fragments(const mesh<Attributes> & object, render_state & rstate) {
 		thrust::for_each(
 				object.render_buffer.triangles.begin(),
 				object.render_buffer.triangles.end(),
-				fragment_processor_kernel<vertex_array<Attributes> >(object, rstate.gbuff));
+				fragment_processor_kernel<mesh >(object, rstate.gbuff));
 	}
 }

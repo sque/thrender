@@ -30,7 +30,7 @@ namespace shaders {
 		//! Model view projection matrix
 		const glm::mat4 & mvp;
 
-		// To be reviewd
+		// To be reviewed
 		unsigned half_width;
 		unsigned half_height;
 

@@ -9,7 +9,7 @@ namespace utils {
 
 	namespace C = boost::chrono;
 
-	//! Helper structure to lock frame rate
+	//! Helper class to lock frame rate
 	/**
 	 * Create an object with the desired frame rate
 	 * and call keep_frame_rate() at the end of the rendering loop.
