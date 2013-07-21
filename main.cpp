@@ -33,108 +33,6 @@ SDL_Texture * tex_diffuse;
 SDL_Texture * tex_depth;
 SDL_Texture * tex_normals;
 
-struct draw_pixel {
-	thrender::gbuffer & gbuf;
-
-	draw_pixel(thrender::gbuffer & _gbuf) :
-			gbuf(_gbuf) {
-	}
-
-	inline bool operator()(int x, int y) {
-		gbuf.diffuse[thrender::coord2d(x,y)] = glm::vec4(1, 0, 0, 1);
-
-		return true;
-	}
-};
-
-struct interpolate_draw_pixel {
-	thrender::gbuffer & gbuf;
-
-	const glm::vec4 & from, &to;
-	float sqlength;
-	float zdist;
-
-	interpolate_draw_pixel(thrender::gbuffer & _gbuf, const glm::vec4 & _from,
-			const glm::vec4 & _to) :
-			gbuf(_gbuf), from(_from), to(_to), zdist(from.z - to.z) {
-		//sqlength = glm::length(to-from);
-		sqlength = pow(to.x - from.x, 2) + pow(to.y - from.y, 2);
-	}
-
-	inline bool operator()(int x, int y) {
-		size_t coords = thrender::coord2d(x,y);
-		float factor, z;
-		if (!sqlength) {
-			z = from.z;
-		} else {
-			float sqdist = pow(x - from.x, 2) + pow(y - from.y, 2);
-			factor = sqdist / sqlength;
-			z = (zdist) * factor + from.z;
-		}
-		if (gbuf.depth[coords] > z)	// Z-test
-			return true;
-
-		gbuf.depth[coords] = z;
-		gbuf.diffuse[coords] = glm::vec4(1, 0, 0, 1);
-		//gbuf.buf_normal[coords] =
-		return true;
-	}
-};
-
-struct edge {
-	float slope;
-	bool vertical;
-
-	const glm::vec3 & p1;
-	const glm::vec3 & p2;
-
-	edge(const glm::vec3 & _p1, const glm::vec3 & _p2) :
-			vertical(false), p1(_p1), p2(_p2) {
-
-		if (p2.x - p1.x)
-			slope = (p2.y - p1.y) / (p2.x - p1.x);
-		else {
-
-			vertical = false;
-		}
-	}
-
-	bool check_point_leftof(int x, int y) {
-		if ((vertical) || (y == p1.y))
-			return x <= p1.x;
-		if (y == p2.y)
-			return x <= p2.x;
-		return false;
-	}
-};
-
-template<class PixelOperation>
-struct walk_scan_line {
-
-	const glm::vec3 ** points;
-
-	PixelOperation & pixel_op;
-
-	edge e01, e02, e21;
-
-	walk_scan_line(PixelOperation _op, const glm::vec3 * _points[]) :
-			points(_points), pixel_op(_op), e01(*points[0], *points[1]), e02(
-					*points[0], *points[2]), e21(*points[2], *points[1]) {
-	}
-
-	bool operator()(int x, int y) {
-		if (y <= points[2]->y) {
-			for (int xw = x; e02.check_point_leftof(xw, y); xw++)
-				pixel_op(xw, y);
-		}
-		return true;
-	}
-};
-
-
-
-
-
 void upload_images(thrender::gbuffer & gbuf) {
 
 	long src_index = 0;
@@ -198,12 +96,10 @@ void upload_images(thrender::gbuffer & gbuf) {
 
 void render() {
 
-	typedef thrender::utils::plain_timer<boost::chrono::high_resolution_clock> timer;
-	//timer tm;
 	thrender::gbuffer gbuff(640, 480);
 	gbuff.set_clear_diffuse(glm::vec4(0, 0, 0, 1));
 
-	typedef thrender::vertex_array<thrust::tuple<glm::vec4, glm::vec4, glm::vec4> > mesh_type;
+	typedef thrender::mesh<thrust::tuple<glm::vec4, glm::vec4, glm::vec4> > mesh_type;
 	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/tux__.ply");
 
 	//thrust::host_vector<thrender::triangle>::iterator it;
@@ -221,14 +117,14 @@ void render() {
 		{	PROFILE_BLOCK(prof, "Process vertices");
 			thrender::process_vertices< thrender::shaders::default_vertex_shader<mesh_type> >(tux, rstate);
 		}
-		{	PROFILE_BLOCK(prof, "Process fragments");
+		/*{	PROFILE_BLOCK(prof, "Process fragments");
 			thrender::process_fragments(tux, rstate);
-		}
+		}*/
 		{	PROFILE_BLOCK(prof, "Upload images");
 			upload_images(gbuff);
 		}
 		//tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
-		cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,0));
+		cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,1));
 		std::cout << prof.report() << std::endl;
 
 		//lock_fps.keep_frame_rate();
