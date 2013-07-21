@@ -2,7 +2,7 @@
 
 #include "./render_state.hpp"
 #include "./camera.hpp"
-#include "./rendable.hpp"
+#include "./renderable.hpp"
 //#include "./shaders/default_vertex.hpp"
 #include <thrust/iterator/zip_iterator.h>
 #include <boost/tuple/tuple.hpp>
@@ -12,17 +12,17 @@ namespace shaders {
 
 
 	//! Default vertex shader
-	template<class RendableType>
+	template<class RenderableType>
 	struct default_vertex_shader {
 
-		//! Type of rendable object
-		typedef RendableType rendable_type;
+		//! Type of renderable object
+		typedef RenderableType renderable_type;
 
 		//! Type of vertex
-		typedef typename rendable_type::vertex_type vertex_type;
+		typedef typename renderable_type::vertex_type vertex_type;
 
 		//! Reference to object
-		rendable_type & object;
+		renderable_type & object;
 
 		//! Reference to render state
 		render_state & rstate;
@@ -34,7 +34,7 @@ namespace shaders {
 		unsigned half_width;
 		unsigned half_height;
 
-		default_vertex_shader(const glm::mat4 & _mvp, rendable_type & _object, render_state & _rstate) :
+		default_vertex_shader(const glm::mat4 & _mvp, renderable_type & _object, render_state & _rstate) :
 			object(_object),
 			rstate(_rstate),
 			mvp(_mvp)

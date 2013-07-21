@@ -14,7 +14,7 @@ namespace thrender {
 		//! View matrix of camera
 		glm::mat4 view_mat;
 
-		//! Construct camera
+		//! Initialize camera matrices from scene parameters.
 		/**
 		 * @param pos The position of camera in world-space
 		 * @param fov The field of view angle of this camera

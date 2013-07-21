@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../rendable.hpp"
+#include "../renderable.hpp"
 #include <assimp/Importer.hpp> // C++ importer interface
 #include <assimp/scene.h> 		// Output data structure
 #include <assimp/postprocess.h> // Post processing flags
@@ -65,6 +65,7 @@ namespace utils {
 				);
 			}
 
+		outm.data_updated();
 		return outm;
 	}
 }}

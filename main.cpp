@@ -99,11 +99,11 @@ void render() {
 	thrender::gbuffer gbuff(640, 480);
 	gbuff.set_clear_diffuse(glm::vec4(0, 0, 0, 1));
 
-	typedef thrender::rendable<thrust::tuple<
+	typedef thrender::renderable<thrust::tuple<
 			glm::vec4,
 			glm::vec4,
 			glm::vec4> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/tux__.ply");
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/cube.ply");
 
 	//thrust::host_vector<thrender::triangle>::iterator it;
 	thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
@@ -120,17 +120,17 @@ void render() {
 		{	PROFILE_BLOCK(prof, "Process vertices");
 			thrender::process_vertices< thrender::shaders::default_vertex_shader<mesh_type> >(tux, rstate);
 		}
-		/*{	PROFILE_BLOCK(prof, "Process fragments");
+		{	PROFILE_BLOCK(prof, "Process fragments");
 			thrender::process_fragments(tux, rstate);
-		}*/
+		}
 		{	PROFILE_BLOCK(prof, "Upload images");
-			//upload_images(gbuff);
+			upload_images(gbuff);
 		}
 		//tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
-		//cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,1));
+		cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,1));
 		std::cout << prof.report() << std::endl;
 
-		//lock_fps.keep_frame_rate();
+		lock_fps.keep_frame_rate();
 	}
 
 	std::ofstream myfile;
