@@ -10,10 +10,10 @@ namespace thrender {
 
 		const mesh & m;
 		const thrust::host_vector<glm::vec4> & ws_vertices;
-		render_state & rstate;
+		render_context & rstate;
 
 		primitives_proc_kernel(const thrust::host_vector<glm::vec4> & v,
-				const mesh & _m, thrender::render_state & _rstate) :
+				const mesh & _m, thrender::render_context & _rstate) :
 				m(_m), ws_vertices(v), rstate(_rstate) {
 		}
 
@@ -28,7 +28,7 @@ namespace thrender {
 	};
 
 	// Process projected vertices and extract primitives.
-	thrust::host_vector<triangle> process_primitives(const mesh & m, thrender::render_state & rstate) {
+	thrust::host_vector<triangle> process_primitives(const mesh & m, thrender::render_context & rstate) {
 		thrust::host_vector<triangle> primitives(m.total_triangles());
 
 		thrust::transform(

@@ -103,12 +103,12 @@ void render() {
 			glm::vec4,
 			glm::vec4,
 			glm::vec4> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/cube.ply");
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/tux__.ply");
 
 	//thrust::host_vector<thrender::triangle>::iterator it;
 	thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
 
-	thrender::render_state rstate(cam, gbuff);
+	thrender::render_context rstate(cam, gbuff);
 
 	thrender::utils::frame_rate_keeper<> lock_fps(10);
 	thrender::utils::profiler<boost::chrono::high_resolution_clock> prof("Render procedure");

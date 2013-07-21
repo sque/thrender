@@ -148,7 +148,7 @@ namespace thrender {
 
 	// Rasterization of fragments/primitives
 	template<class RenderableType>
-	void process_fragments(const RenderableType & object, render_state & rstate) {
+	void process_fragments(const RenderableType & object, render_context & rstate) {
 		thrust::for_each(
 				object.intermediate_buffer.elements.begin(),
 				object.intermediate_buffer.elements.end(),
