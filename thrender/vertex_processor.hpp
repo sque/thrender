@@ -37,9 +37,7 @@ namespace thrender {
 		:
 			vertex_id(0),
 			object(_object),
-			context(_context),
-			view_half_width(context.window_width() /2),
-			view_half_height(context.window_height() /2)
+			context(_context)
 		{}
 
 		//! Drops the current vertex as discarded
@@ -59,9 +57,9 @@ namespace thrender {
 			pos = pos / pos.w;
 
 			// window space
-			pos.x = (pos.x * view_half_width) + view_half_width;
-			pos.y = (pos.y * view_half_height) + view_half_height;
-			pos.z = (pos.z * (context.far - context.near)/2) + (context.far + context.near)/2;
+			pos.x = context.vp.left() + (pos.x * context.vp.half_width()) + context.vp.half_width();
+			pos.y = context.vp.top() + (pos.y * context.vp.half_height()) + context.vp.half_height();
+			pos.z = (pos.z * (context.depth_buffer_far - context.depth_buffer_near)/2) + (context.depth_buffer_far + context.depth_buffer_near)/2;
 		}
 
 		//! Viewport clipping
@@ -73,21 +71,14 @@ namespace thrender {
 		template<class V>
 		void viewport_clip(V & pos) {
 
-			if (pos.x >= context.window_width()	|| pos.x < 0
-					|| pos.y > context.window_height() || pos.y < 0
-					|| pos.z < context.near || pos.z > context.far)
+			if (pos.x >= context.vp.width()	|| pos.x < 0
+					|| pos.y > context.vp.height() || pos.y < 0
+					// FixME: Add z cliping by cliping planes || pos.z < context.depth_buffer_near || pos.z > context.depth_buffer_far)
+				)
 			{
 				discard();
 			}
 		}
-
-	private:
-		//! Window view_half_width
-		window_size_t view_half_width;
-
-		//! Window view_half_height
-		window_size_t view_half_height;
-
 	};
 
 

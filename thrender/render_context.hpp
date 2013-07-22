@@ -3,31 +3,27 @@
 #include "./gbuffer.hpp"
 #include "./camera.hpp"
 #include "./types.hpp"
+#include "./viewport.hpp"
 
 namespace thrender {
+
 
 	//! Context of current rendering
 	struct render_context {
 
-		// Normalization of z-buffer
-		float near, far;
 
 		gbuffer & gbuff;
 		camera & cam;
+		viewport vp;
 
 		render_context(camera & _camera, gbuffer & _gbuffer) :
-			near(1),
-			far(0),
 			gbuff(_gbuffer),
-			cam(_camera){}
+			cam(_camera),
+			vp(0, 0, gbuff.width, gbuff.height),
+			depth_buffer_near(1),
+			depth_buffer_far(0)
+		{}
 
-		inline window_size_t window_width() const {
-			return gbuff.width;
-		}
-
-		inline window_size_t window_height() const {
-			return gbuff.height;
-		}
 
 		inline camera & get_camera() {
 			return cam;
@@ -36,5 +32,11 @@ namespace thrender {
 		inline gbuffer get_framebuffer() {
 			return gbuff;
 		}
+
+		//! Depth buffer value representing near plane
+		depth_pixel_t depth_buffer_near;
+
+		//! Depth buffer value representing far plane
+		depth_pixel_t depth_buffer_far;
 	};
 }
