@@ -121,11 +121,11 @@ namespace thrender {
 			const glm::vec4 * pord[3] = {tr.pv[0], tr.pv[1], tr.pv[2]};
 			math::sort3vec_by_y(pord);
 
-			glm::vec2 size = tr.bounding_box();
+			/*glm::vec2 size = tr.bounding_box();
 			if (size.y < 1.0f && size.x < 1.0f) {
 				singlepix_op(pord[0]->x, pord[1]->y, &tr);
 				return;
-			}
+			}*/
 
 			// Find triangle contour
 			polygon_horizontal_limits tri_contour;

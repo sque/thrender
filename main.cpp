@@ -94,6 +94,32 @@ void upload_images(thrender::gbuffer & gbuf) {
 
 }
 
+//glm::mat4 model_rot(1.0f); //tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
+thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
+
+void process_events() {
+    SDL_Event event;
+
+    while ( SDL_PollEvent(&event) ) {
+        switch (event.type) {
+            case SDL_MOUSEMOTION:
+                /*printf("Mouse moved by %d,%d to (%d,%d)\n",
+                       event.motion.xrel, event.motion.yrel,
+                       event.motion.x, event.motion.y);*/
+            	if (event.motion.state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+            		cam.view_mat = glm::rotate(cam.view_mat, float(event.motion.xrel), glm::vec3(0, 1, 0));
+            		cam.view_mat = glm::rotate(cam.view_mat, -float(event.motion.yrel), glm::vec3(0, 0, 1));
+            	}
+                break;
+            case SDL_MOUSEWHEEL:
+                cam.view_mat = glm::translate(cam.view_mat, glm::vec3(0, 0, event.wheel.y));
+
+                break;
+            case SDL_QUIT:
+                exit(0);
+        }
+    }
+}
 void render() {
 
 	thrender::gbuffer gbuff(640, 480);
@@ -103,10 +129,10 @@ void render() {
 			glm::vec4,
 			glm::vec4,
 			glm::vec4> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/tux__.ply");
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/cube.ply");
 
 	//thrust::host_vector<thrender::triangle>::iterator it;
-	thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
+	//thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
 	thrender::render_context ctx(cam, gbuff);
 	thrender::shaders::default_vertex_shader vx_shader;
 	vx_shader.mvp_mat = ctx.cam.projection_mat * ctx.cam.view_mat;
@@ -129,11 +155,12 @@ void render() {
 			upload_images(gbuff);
 		}
 		//tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
-		cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,1));
+		//cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,1));
 		vx_shader.mvp_mat = ctx.cam.projection_mat * ctx.cam.view_mat/* * m.model_mat*/;
 		std::cout << prof.report() << std::endl;
 
-		lock_fps.keep_frame_rate();
+		process_events();
+		//lock_fps.keep_frame_rate();
 	}
 
 	std::ofstream myfile;
