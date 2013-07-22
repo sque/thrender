@@ -29,7 +29,7 @@ namespace thrender {
 		void clear() {
 			for(extra_buffers_type::iterator
 					it = extra_buffers.begin();it!= extra_buffers.end();it++) {
-				//it->clear();
+				// FixME: it->clear();
 			}
 		}
 

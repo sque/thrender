@@ -152,6 +152,6 @@ namespace thrender {
 		thrust::for_each(
 				object.intermediate_buffer.elements.begin(),
 				object.intermediate_buffer.elements.end(),
-				fragment_processor_kernel<RenderableType >(object, rstate.gbuff));
+				fragment_processor_kernel<RenderableType >(object, rstate.fb));
 	}
 }

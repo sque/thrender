@@ -112,7 +112,7 @@ void render() {
 	vx_shader.mvp_mat = ctx.cam.projection_mat * ctx.cam.view_mat;
 
 
-	thrender::utils::frame_rate_keeper<> lock_fps(60);
+	thrender::utils::frame_rate_keeper<> lock_fps(1);
 	thrender::utils::profiler<boost::chrono::high_resolution_clock> prof("Render procedure");
 	for (int i = 1; i < 150000; i++) {
 		prof.clear();

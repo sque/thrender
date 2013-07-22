@@ -59,7 +59,7 @@ namespace thrender {
 			// window space
 			pos.x = context.vp.left() + (pos.x * context.vp.half_width()) + context.vp.half_width();
 			pos.y = context.vp.top() + (pos.y * context.vp.half_height()) + context.vp.half_height();
-			pos.z = (pos.z * (context.depth_buffer_far - context.depth_buffer_near)/2) + (context.depth_buffer_far + context.depth_buffer_near)/2;
+			pos.z = context.depth_range.translate_to_window_space(pos.z);
 		}
 
 		//! Viewport clipping
