@@ -45,7 +45,7 @@ namespace thrender {
 					VA_ATTRIBUTE(m.vertices[ptri->indices[2]], NORMAL) * lamdas.z;
 
 			gbuf.depth[coords] = z;
-			gbuf.diffuse[coords] = color;
+			gbuf.diffuse.serial_at(coords) = color;
 			gbuf.normal[coords] = normal;
 			return true;
 		}
@@ -83,7 +83,7 @@ namespace thrender {
 						VA_ATTRIBUTE(m.vertices[ptri->indices[2]], NORMAL) * (1.0f/3.0f);
 
 				gbuf.depth[coords] = z;
-				gbuf.diffuse[coords] = color;
+				gbuf.diffuse.serial_at(coords) = color;
 				gbuf.normal[coords] = normal;
 				return true;
 			}

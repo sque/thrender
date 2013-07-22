@@ -7,4 +7,11 @@ namespace thrender {
 
 	//! Type of vertex id
 	typedef size_t vertex_id_t;
+
+	//! Type of pitch
+	typedef size_t pitch_t;
+
+	//! Type of depth pixel
+	typedef double depth_pixel_t;
+
 }

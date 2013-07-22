@@ -63,7 +63,7 @@ void upload_images(thrender::gbuffer & gbuf) {
 		dst_normals = (Uint32*) ((Uint8*) pixels_normals + row * pitch_normals);
 
 		for (col = 0; col < 640; ++col) {
-			glm::vec4 color = gbuf.diffuse[src_index++] * 255.0f;
+			glm::vec4 color = gbuf.diffuse.serial_at(src_index++) * 255.0f;
 			glm::vec4 normal = gbuf.normal[src_index] * 255.0f;
 			float d = gbuf.depth[src_index] * 255.0f;
 			//*dst++ = (0xFF000000|(color.r << 16)|(color.g << 8) | color.b);
@@ -112,7 +112,7 @@ void render() {
 	vx_shader.mvp_mat = ctx.cam.projection_mat * ctx.cam.view_mat;
 
 
-	thrender::utils::frame_rate_keeper<> lock_fps(10);
+	thrender::utils::frame_rate_keeper<> lock_fps(60);
 	thrender::utils::profiler<boost::chrono::high_resolution_clock> prof("Render procedure");
 	for (int i = 1; i < 150000; i++) {
 		prof.clear();
