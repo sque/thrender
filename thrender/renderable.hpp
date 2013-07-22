@@ -1,6 +1,7 @@
 #pragma once
 
 #include "./vertex_array.hpp"
+#include "./triangle.hpp"
 
 namespace thrender{
 
@@ -38,20 +39,15 @@ namespace details {
 			thrust::fill(discarded_vertices.begin(), discarded_vertices.end(), false);
 		}
 
-		void rebuild(size_t vertices_sz , thrust::host_vector<glm::ivec3> & itriangles) {
+		void rebuild(size_t vertices_sz , thrust::host_vector<indices3_t> & itriangles) {
 			processed_vertices.resize(vertices_sz);
 			discarded_vertices.resize(vertices_sz);
 			elements.clear();
 
-			thrust::host_vector<glm::ivec3>::iterator it_index;
+			thrust::host_vector<indices3_t>::iterator it_index;
 			for(it_index = itriangles.begin();it_index != itriangles.end(); it_index++) {
-				glm::ivec3 & indices = *it_index;
-				elements.push_back(
-					primitive_type(
-						processed_vertices,
-						indices.x, indices.y, indices.z,
-						false)
-					);
+				indices3_t & indices = *it_index;
+				elements.push_back( primitive_type(processed_vertices, indices, false) );
 			}
 		}
 	};
@@ -76,7 +72,7 @@ namespace details {
 		details::rendable_intermediate_buffer< vertex_array_type, triangle_type> intermediate_buffer;
 
 		//! Indices of vertices per element
-		thrust::host_vector<glm::ivec3> element_indices;
+		thrust::host_vector<indices3_t> element_indices;
 
 		//! Construct a new renderable object, uninitialized
 		/**

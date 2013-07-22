@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 namespace thrender {
 
 	//! Type of window dimension size
@@ -13,5 +15,8 @@ namespace thrender {
 
 	//! Type of depth pixel
 	typedef double depth_pixel_t;
+
+	//! Type of 3 part indices
+	typedef glm::uvec3 indices3_t;
 
 }

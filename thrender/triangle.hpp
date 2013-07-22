@@ -1,13 +1,10 @@
 #pragma once
 
-#include <thrust/host_vector.h>
 #include <glm/glm.hpp>
 #include "./math.hpp"
+#include "./vertex_array.hpp"
 
 namespace thrender {
-
-	template<class A>
-	struct vertex_array_type;
 
 	//! Triangle primitive
 	template <class VertexType>
@@ -17,10 +14,10 @@ namespace thrender {
 		typedef VertexType vertex_type;
 
 		//! Vector indices
-		size_t indices[3];
+		indices3_t indices;
 
 		//! Pointer to position attributes
-		const glm::vec4 * pv[3];
+		const glm::vec4 * positions[3];
 
 		//! Pointer to processed vertices list
 		const thrust::host_vector<vertex_type> (*processed_vertices);
@@ -31,27 +28,20 @@ namespace thrender {
 		} flags;
 
 		//! Construct a new triangle
-		triangle(const thrust::host_vector<vertex_type> & _processed_vertices,
-				size_t iv0,
-				size_t iv1,
-				size_t iv2,
-				bool _discard) :
+		triangle(const thrust::host_vector<vertex_type> & _processed_vertices, indices3_t _indices, bool _discard) :
+				indices(_indices),
 				processed_vertices(&_processed_vertices){
-			indices[0] = iv0;
-			indices[1] = iv1;
-			indices[2] = iv2;
-			pv[0] = &thrust::get<0>((*processed_vertices)[iv0]);
-			pv[1] = &thrust::get<0>((*processed_vertices)[iv1]);
-			pv[2] = &thrust::get<0>((*processed_vertices)[iv2]);
-			flags.discarded = _discard || !is_ccw_winding_order();
+			positions[0] = &thrust::get<0>((*processed_vertices)[indices[0]]);
+			positions[1] = &thrust::get<0>((*processed_vertices)[indices[1]]);
+			positions[2] = &thrust::get<0>((*processed_vertices)[indices[2]]);
 		}
 
 		triangle() {}
 
 		//! Check if triangle has Counter-Clock-Wise winding order
 		bool is_ccw_winding_order() const{
-			float adiff = atan2f(pv[1]->y - pv[0]->y, pv[1]->x - pv[0]->x)
-					- atan2f(pv[2]->y - pv[0]->y, pv[2]->x - pv[0]->x);
+			float adiff = atan2f(positions[1]->y - positions[0]->y, positions[1]->x - positions[0]->x)
+					- atan2f(positions[2]->y - positions[0]->y, positions[2]->x - positions[0]->x);
 			if (adiff < 0)
 				adiff = (M_PI * 2) + adiff;
 			if (adiff < M_PI) {
@@ -62,11 +52,11 @@ namespace thrender {
 
 		//! Calculate the size of the smallest bounding box that fits this triangle
 		glm::vec2 bounding_box() const {
-			float x_max = std::max(std::max(pv[0]->x, pv[1]->x), pv[2]->x);
-			float x_min = std::min(std::min(pv[0]->x, pv[1]->x), pv[2]->x);
+			float x_max = std::max(std::max(positions[0]->x, positions[1]->x), positions[2]->x);
+			float x_min = std::min(std::min(positions[0]->x, positions[1]->x), positions[2]->x);
 
-			float y_max = std::max(std::max(pv[0]->y, pv[1]->y), pv[2]->y);
-			float y_min = std::min(std::min(pv[0]->y, pv[1]->y), pv[2]->y);
+			float y_max = std::max(std::max(positions[0]->y, positions[1]->y), positions[2]->y);
+			float y_min = std::min(std::min(positions[0]->y, positions[1]->y), positions[2]->y);
 			return glm::vec2(x_max-x_min, y_max-y_min);
 		}
 	};

@@ -131,8 +131,6 @@ void render() {
 			glm::vec4> > mesh_type;
 	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/cube.ply");
 
-	//thrust::host_vector<thrender::triangle>::iterator it;
-	//thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
 	thrender::render_context ctx(cam, gbuff);
 	thrender::shaders::default_vertex_shader vx_shader;
 	vx_shader.mvp_mat = ctx.cam.projection_mat * ctx.cam.view_mat;
@@ -163,16 +161,6 @@ void render() {
 		//lock_fps.keep_frame_rate();
 	}
 
-	std::ofstream myfile;
-	myfile.open("pixels.txt");
-/*	for (it = tux.render_buffer.triangles.begin(); it != tux.render_buffer.triangles.end(); it++) {
-		thrender::triangle & f = *it;
-		myfile << glm::to_string(f.bounding_box()) << std::endl;
-	}
-*/
-	myfile.close();
-
-	std::cout << "pixels written" << std::endl;
 	while (1) ;
 }
 
@@ -216,8 +204,7 @@ int main() {
 		return 5;
 	}
 
-	std::cout << "Scene loaded" << std::endl;
+	std::cout << "Initilized SDL" << std::endl;
 	render();
-	std::cout << "Scene rendered" << std::endl;
 	return 0;
 }

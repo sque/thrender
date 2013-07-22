@@ -30,8 +30,8 @@ namespace thrender {
 			/** FixMe: Coordinates are passed as integers (floor rounding).
 			 * In small triangles this is out of borders
 			 */
-			glm::vec4 lamdas = math::barycoords(*ptri->pv[0], *ptri->pv[1], *ptri->pv[2], glm::vec2(x,y));
-			z = lamdas.x * ptri->pv[0]->z + lamdas.y * ptri->pv[1]->z + lamdas.z * ptri->pv[2]->z;
+			glm::vec4 lamdas = math::barycoords(*ptri->positions[0], *ptri->positions[1], *ptri->positions[2], glm::vec2(x,y));
+			z = lamdas.x * ptri->positions[0]->z + lamdas.y * ptri->positions[1]->z + lamdas.z * ptri->positions[2]->z;
 			if (gbuf.depth[coords] > z)	// Z-test
 				return true;
 
@@ -118,7 +118,7 @@ namespace thrender {
 				return;						// Face-culling
 
 			// Sort points by y
-			const glm::vec4 * pord[3] = {tr.pv[0], tr.pv[1], tr.pv[2]};
+			const glm::vec4 * pord[3] = {tr.positions[0], tr.positions[1], tr.positions[2]};
 			math::sort3vec_by_y(pord);
 
 			/*glm::vec2 size = tr.bounding_box();

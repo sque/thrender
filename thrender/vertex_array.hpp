@@ -1,12 +1,9 @@
 #pragma once
 
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <thrust/host_vector.h>
-#include <thrust/iterator/zip_iterator.h>
-#include <iostream>
-#include <boost/tuple/tuple.hpp>
-#include "./triangle.hpp"
+#include <thrust/tuple.h>
+
 
 namespace thrender {
 
