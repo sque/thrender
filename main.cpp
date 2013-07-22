@@ -103,12 +103,14 @@ void render() {
 			glm::vec4,
 			glm::vec4,
 			glm::vec4> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/tux__.ply");
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/tux__.ply");
 
 	//thrust::host_vector<thrender::triangle>::iterator it;
 	thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
+	thrender::render_context ctx(cam, gbuff);
+	thrender::shaders::default_vertex_shader vx_shader;
+	vx_shader.mvp_mat = ctx.cam.projection_mat * ctx.cam.view_mat;
 
-	thrender::render_context rstate(cam, gbuff);
 
 	thrender::utils::frame_rate_keeper<> lock_fps(10);
 	thrender::utils::profiler<boost::chrono::high_resolution_clock> prof("Render procedure");
@@ -118,16 +120,17 @@ void render() {
 			gbuff.clear();
 		}
 		{	PROFILE_BLOCK(prof, "Process vertices");
-			thrender::process_vertices< thrender::shaders::default_vertex_shader<mesh_type> >(tux, rstate);
+			thrender::process_vertices(tux, vx_shader, ctx);
 		}
 		{	PROFILE_BLOCK(prof, "Process fragments");
-			thrender::process_fragments(tux, rstate);
+			thrender::process_fragments(tux, ctx);
 		}
 		{	PROFILE_BLOCK(prof, "Upload images");
 			upload_images(gbuff);
 		}
 		//tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
 		cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,1));
+		vx_shader.mvp_mat = ctx.cam.projection_mat * ctx.cam.view_mat/* * m.model_mat*/;
 		std::cout << prof.report() << std::endl;
 
 		lock_fps.keep_frame_rate();

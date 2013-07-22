@@ -20,76 +20,101 @@ namespace thrender {
 		//! Type of renderable object
 		typedef RenderableType renderable_type;
 
+		//! Type of vertex
+		typedef typename renderable_type::vertex_type vertex_type;
+
 		//! The id of this vertex
 		vertex_id_t vertex_id;
 
 		//! Reference to the owner object
 		const renderable_type & object;
 
+		//! Reference to current render context
+		render_context & context;
+
 		//! Construct control on vertex processing
-		vertex_processing_control(const renderable_type & _object)
+		vertex_processing_control(const renderable_type & _object, render_context & _context)
 		:
 			vertex_id(0),
-			object(_object)
+			object(_object),
+			context(_context),
+			view_half_width(context.window_width() /2),
+			view_half_height(context.window_height() /2)
 		{}
 
 		//! Drops the current vertex as discarded
+		/**
+		 * If a vertex is discarded, all the related elements
+		 * are discarded too.
+		 */
 		void discard() const{
 			const_cast<renderable_type &>(object).intermediate_buffer.discarded_vertices[vertex_id] = true;
 		}
+
+		//! Translate clip coordinates to window space
+		template<class V>
+		void translate_to_window_space(V & pos) {
+
+			// normalized device coordinates
+			pos = pos / pos.w;
+
+			// window space
+			pos.x = (pos.x * view_half_width) + view_half_width;
+			pos.y = (pos.y * view_half_height) + view_half_height;
+			pos.z = (pos.z * (context.far - context.near)/2) + (context.far + context.near)/2;
+		}
+
+		//! Viewport clipping
+		/**
+		 * It will check if vertex is in the limits of viewport
+		 * and rendering frustum and will discard the vertex
+		 * if not.
+		 */
+		template<class V>
+		void viewport_clip(V & pos) {
+
+			if (pos.x >= context.window_width()	|| pos.x < 0
+					|| pos.y > context.window_height() || pos.y < 0
+					|| pos.z < context.near || pos.z > context.far)
+			{
+				discard();
+			}
+		}
+
+	private:
+		//! Window view_half_width
+		window_size_t view_half_width;
+
+		//! Window view_half_height
+		window_size_t view_half_height;
+
 	};
 
 
 namespace shaders {
 
 	//! Default vertex shader
-	template<class RenderableType>
+	/**
+	 * Default shaders process vertices and projects them
+	 * in 3D space based on ModelViewProjection matrix.
+	 */
 	struct default_vertex_shader {
 
-		//! Type of renderable object
-		typedef RenderableType renderable_type;
-
-		//! Type of vertex
-		typedef typename renderable_type::vertex_type vertex_type;
-
-		//! Reference to render state
-		render_context & rcontext;
-
 		//! Model view projection matrix
-		const glm::mat4 & mvp;
+		glm::mat4 mvp_mat;
 
-		// To be reviewed
-		unsigned half_width;
-		unsigned half_height;
-
-		default_vertex_shader(const glm::mat4 & _mvp, render_context & _rcontext) :
-			rcontext(_rcontext),
-			mvp(_mvp)
-		{
-			half_width = rcontext.gbuff.width / 2;
-			half_height = rcontext.gbuff.height / 2;
-		}
-
-		void operator()(const vertex_type & vin, vertex_type & vout, vertex_processing_control<RenderableType> & vcontrol){
+		template<class RenderableType>
+		void operator()(const typename RenderableType::vertex_type & vin, typename RenderableType::vertex_type & vout, vertex_processing_control<RenderableType> & vcontrol){
 			const glm::vec4 & posIn = VA_ATTRIBUTE(vin, POSITION);
 			glm::vec4 & posOut = VA_ATTRIBUTE(vout, POSITION);
 
-			posOut = mvp * posIn;
+			posOut = mvp_mat * posIn;
 			// clip coordinates
 
-			posOut = posOut / posOut.w;
-			// normalized device coordinates
+			vcontrol.translate_to_window_space(posOut);
+			// translate to window space
 
-			posOut.x = (posOut.x * half_width) + half_width;
-			posOut.y = (posOut.y * half_height) + half_height;
-			posOut.z = (posOut.z * (rcontext.far - rcontext.near)/2) + (rcontext.far + rcontext.near)/2;
-			// window space
-
-			// Discard vertices
-			// FIXME: Add z clipping
-			if (posOut.x >= rcontext.gbuff.width || posOut.x < 0 || posOut.y > rcontext.gbuff.height || posOut.y < 0)
-				vcontrol.discard();
-			return;
+			vcontrol.viewport_clip(posOut);
 		}
 	};
 }
@@ -118,11 +143,11 @@ namespace shaders {
 		vertex_processing_control<RenderableType> vcontrol;
 
 		//! Initialize by referencing the wrapped shader
-		vertex_processor_kernel(shader_type & _shader, const renderable_type & _object)
+		vertex_processor_kernel(shader_type & _shader, const renderable_type & _object, render_context & _context)
 		:
 			shader(_shader),
 			object(_object),
-			vcontrol(object)
+			vcontrol(object, _context)
 		{}
 
 		template<class T>
@@ -135,15 +160,10 @@ namespace shaders {
 
 	//! Process vertices and extract projected on window space
 	template<class VertexShader, class RenderableType>
-	void process_vertices(RenderableType & object, render_context & rstate) {
+	void process_vertices(RenderableType & object, VertexShader & shader, render_context & context) {
 
 		// Prepare object
 		object.prepare_for_rendering();
-		glm::mat4 mvp_mat(1.0f);
-		mvp_mat = rstate.cam.projection_mat * rstate.cam.view_mat/* * m.model_mat*/;
-
-		// Custom shader
-		VertexShader shader(mvp_mat, rstate) ;
 
 		// Process vertices
 		size_t total_vertices = object.vertices.size();
@@ -151,6 +171,6 @@ namespace shaders {
 		thrust::for_each(
 			thrust::make_zip_iterator(thrust::make_tuple(object.vertices.cbegin(), object.intermediate_buffer.processed_vertices.begin(), count_begin)),
 			thrust::make_zip_iterator(thrust::make_tuple(object.vertices.cend(), object.intermediate_buffer.processed_vertices.end(), count_begin + total_vertices)),
-			vertex_processor_kernel<VertexShader, RenderableType>(shader, object));		// Operation
+			vertex_processor_kernel<VertexShader, RenderableType>(shader, object, context));		// Operation
 	}
 }
