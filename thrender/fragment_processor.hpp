@@ -36,13 +36,13 @@ namespace thrender {
 				return true;
 
 			glm::vec4 color =
-					VA_ATTRIBUTE(m.vertices[ptri->indices[0]], COLOR) * lamdas.x+
-					VA_ATTRIBUTE(m.vertices[ptri->indices[1]], COLOR) * lamdas.y+
-					VA_ATTRIBUTE(m.vertices[ptri->indices[2]], COLOR) * lamdas.z;
+					VA_ATTRIBUTE(ptri->vertice(0), COLOR) * lamdas.x+
+					VA_ATTRIBUTE(ptri->vertice(1), COLOR) * lamdas.y+
+					VA_ATTRIBUTE(ptri->vertice(2), COLOR) * lamdas.z;
 			glm::vec4 normal =
-					VA_ATTRIBUTE(m.vertices[ptri->indices[0]], NORMAL) * lamdas.x+
-					VA_ATTRIBUTE(m.vertices[ptri->indices[1]], NORMAL) * lamdas.y+
-					VA_ATTRIBUTE(m.vertices[ptri->indices[2]], NORMAL) * lamdas.z;
+					VA_ATTRIBUTE(ptri->vertice(0), NORMAL) * lamdas.x+
+					VA_ATTRIBUTE(ptri->vertice(1), NORMAL) * lamdas.y+
+					VA_ATTRIBUTE(ptri->vertice(2), NORMAL) * lamdas.z;
 
 			gbuf.depth[coords] = z;
 			gbuf.diffuse.serial_at(coords) = color;
@@ -74,13 +74,13 @@ namespace thrender {
 					return true;
 
 				glm::vec4 color =
-						VA_ATTRIBUTE(m.vertices[ptri->indices[0]], COLOR) * (1.0f/3.0f)+
-						VA_ATTRIBUTE(m.vertices[ptri->indices[1]], COLOR) * (1.0f/3.0f)+
-						VA_ATTRIBUTE(m.vertices[ptri->indices[2]], COLOR) * (1.0f/3.0f);
+						VA_ATTRIBUTE(ptri->vertice(0), COLOR) * (1.0f/3.0f)+
+						VA_ATTRIBUTE(ptri->vertice(1), COLOR) * (1.0f/3.0f)+
+						VA_ATTRIBUTE(ptri->vertice(2), COLOR) * (1.0f/3.0f);
 				glm::vec4 normal =
-						VA_ATTRIBUTE(m.vertices[ptri->indices[0]], NORMAL) * (1.0f/3.0f)+
-						VA_ATTRIBUTE(m.vertices[ptri->indices[1]], NORMAL) * (1.0f/3.0f)+
-						VA_ATTRIBUTE(m.vertices[ptri->indices[2]], NORMAL) * (1.0f/3.0f);
+						VA_ATTRIBUTE(ptri->vertice(0), NORMAL) * (1.0f/3.0f)+
+						VA_ATTRIBUTE(ptri->vertice(1), NORMAL) * (1.0f/3.0f)+
+						VA_ATTRIBUTE(ptri->vertice(2), NORMAL) * (1.0f/3.0f);
 
 				gbuf.depth[coords] = z;
 				gbuf.diffuse.serial_at(coords) = color;

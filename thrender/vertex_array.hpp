@@ -33,8 +33,6 @@ namespace thrender {
 
 #define VA_VERTEX_BEGIN() \
 	thrust::tuple<
-#define VA_ATTRIBUsTE(type) \
-	type,
 #define VA_VERTEX_END(type_name) \
 	> type_name;
 

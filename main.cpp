@@ -129,7 +129,7 @@ void render() {
 			glm::vec4,
 			glm::vec4,
 			glm::vec4> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/cube.ply");
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/tux__.ply");
 
 	thrender::render_context ctx(cam, gbuff);
 	thrender::shaders::default_vertex_shader vx_shader;
@@ -152,8 +152,6 @@ void render() {
 		{	PROFILE_BLOCK(prof, "Upload images");
 			upload_images(gbuff);
 		}
-		//tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
-		//cam.view_mat = glm::rotate(cam.view_mat, 10.0f, glm::vec3(0,1,1));
 		vx_shader.mvp_mat = ctx.cam.projection_mat * ctx.cam.view_mat/* * m.model_mat*/;
 		std::cout << prof.report() << std::endl;
 
