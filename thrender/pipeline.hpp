@@ -4,26 +4,34 @@
 namespace thrender {
 
 	template<
-		class VertexArray,
-		class VertexShader = shaders::default_vertex_shader<VertexArray> >
+		class RenderableType,
+		class VertexShader,
+		class FragmentShader>
 	struct pipeline {
 
-		typedef VertexArray vertex_array_type;
+		typedef RenderableType renderable_type;
 
 		//! Type of vertex shader
 		typedef VertexShader vertex_shader_type;
 
-		vertex_array & object;
+		//! Type of fragment shader
+		typedef FragmentShader fragment_shader_type;
 
-		vertex_shader_type vertex_shader;
+		vertex_shader_type  & vx_shader;
 
-		//fragment_shader_type fragment_shader;
+		fragment_shader_type & fg_shader;
 
 		//! Execute pipeline to render one frame
-		void execute(const camera & _camera, vertex_array_type & _object, gbuffer & _gbuff) {
-			render_context rstate;
-			process_vertices<vertex_shader_type, vertex_array_type>(_object, rstate);
-			process_fragments(_object.render_buffer.triangles, _gbuff);
+		pipeline(vertex_shader_type & _vx_shader, fragment_shader_type & _fg_shader) :
+			vx_shader(_vx_shader),
+			fg_shader(_fg_shader)
+		{
+
+		}
+
+		void draw(renderable_type & object, render_context & context){
+			process_vertices<vertex_shader_type, renderable_type>(object, vx_shader, context);
+			process_fragments<fragment_shader_type, renderable_type>(object, fg_shader, context);
 		}
 
 	};

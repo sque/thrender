@@ -67,22 +67,26 @@ namespace thrender {
 
 namespace shaders {
 
-	template<class RenderableType>
+
 	struct default_fragment_shader {
 
-		typedef RenderableType renderable_type;
+//		typedef RenderableType renderable_type;
 
-		typedef typename renderable_type::vertex_type vertex_type;
+		//typedef typename renderable_type::vertex_type vertex_type;
 
-		void operator()(gbuffer & gbuf, const fragment_processing_control<renderable_type> & fg_control, size_t coords) {
+		template<class RenderableType>
+		void operator()(gbuffer & gbuf, const fragment_processing_control<RenderableType> & fg_control, size_t coords) {
 
 			gbuf.diffuse.serial_at(coords) = fg_control.template interpolate<COLOR, glm::vec4>();
 			gbuf.normal[coords] = fg_control.template interpolate<NORMAL, glm::vec4>();
 		}
 	};
 }
-	template<class RenderableType>
+	template<class FragmentShader, class RenderableType>
 	struct fragment_processor_kernel {
+
+		//! Type of fragment shader
+		typedef FragmentShader fragment_shader;
 
 		//! Type of the rendererable object
 		typedef RenderableType renderable_type;
@@ -96,11 +100,15 @@ namespace shaders {
 		//! Reference to current rendering context
 		render_context & context;
 
+		//! Reference to fragment shader
+		fragment_shader & shader;
+
 		//! Construct the kernel for a specific object and context
-		fragment_processor_kernel(const renderable_type & _object, render_context & _context)
+		fragment_processor_kernel(const renderable_type & _object, fragment_shader & _shader, render_context & _context)
 		:
 			object(_object),
-			context(_context)
+			context(_context),
+			shader(_shader)
 		{
 		}
 
@@ -141,7 +149,6 @@ namespace shaders {
 
 			// Scan conversion fill
 			fragment_processing_control<RenderableType> fgcontrol(object, context, tr);
-			shaders::default_fragment_shader<RenderableType> fgshader;
 			for (window_size_t y = pord[2]->y; y <= pord[0]->y; y++) {
 				for (window_size_t x = tri_contour.leftmost[y]; x < tri_contour.rightmost[y]; x++) {
 					size_t coords = coord2d(x,y);
@@ -152,7 +159,7 @@ namespace shaders {
 					if (context.fb.depth[coords] > z)	// Z-test
 						continue;
 						context.fb.depth[coords] = z;
-					fgshader(context.fb, fgcontrol, coords);
+					shader(context.fb, fgcontrol, coords);
 				}
 
 			}
@@ -161,11 +168,11 @@ namespace shaders {
 	};
 
 	// Rasterization of fragments/primitives
-	template<class RenderableType>
-	void process_fragments(const RenderableType & object, render_context & context) {
+	template<class FragmentShader, class RenderableType>
+	void process_fragments(const RenderableType & object, FragmentShader & shader, render_context & context) {
 		thrust::for_each(
 				object.intermediate_buffer.elements.begin(),
 				object.intermediate_buffer.elements.end(),
-				fragment_processor_kernel<RenderableType >(object, context));
+				fragment_processor_kernel<FragmentShader, RenderableType >(object, shader, context));
 	}
 }

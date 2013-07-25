@@ -21,6 +21,7 @@
 #include "thrender/utils/to_string.hpp"
 #include "thrender/utils/frame_rate_keeper.hpp"
 #include "thrender/utils/profiler.hpp"
+#include "thrender/pipeline.hpp"
 
 #define PI	3.141593
 #define HPI	(PI / 2.0f)
@@ -130,11 +131,14 @@ void render() {
 			glm::vec4,
 			glm::vec4,
 			glm::vec2> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/tux__.ply");
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/cube.ply");
 
 	thrender::render_context ctx(cam, gbuff);
 	thrender::shaders::default_vertex_shader vx_shader;
+	thrender::shaders::default_fragment_shader fg_shader;
+	thrender::pipeline<mesh_type,thrender::shaders::default_vertex_shader, thrender::shaders::default_fragment_shader> pp(vx_shader, fg_shader);
 	vx_shader.mvp_mat = ctx.cam.projection_mat * ctx.cam.view_mat;
+
 
 
 	thrender::utils::frame_rate_keeper<> lock_fps(1);
@@ -148,8 +152,20 @@ void render() {
 			thrender::process_vertices(tux, vx_shader, ctx);
 		}
 		{	PROFILE_BLOCK(prof, "Process fragments");
-			thrender::process_fragments(tux, ctx);
+			thrender::process_fragments(tux, fg_shader, ctx);
 		}
+		{
+			PROFILE_BLOCK(prof, "Pipelined 500 render");
+
+			for(int k =0;k < 500;k++){
+				glm::mat4 model_mat(1.0f);
+				model_mat = glm::translate(model_mat, glm::vec3(0,0,0.5*k));
+				model_mat = glm::rotate(model_mat, 45.0f, glm::vec3(1.0f,1.0f,.0f));
+				vx_shader.mvp_mat = ctx.cam.projection_mat * ctx.cam.view_mat * model_mat;
+				pp.draw(tux, ctx);
+			}
+		}
+
 		{	PROFILE_BLOCK(prof, "Upload images");
 			upload_images(gbuff);
 		}
