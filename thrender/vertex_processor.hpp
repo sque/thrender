@@ -32,9 +32,9 @@ namespace thrender {
 		render_context & context;
 
 		//! Construct control on vertex processing
-		vertex_processing_control(const renderable_type & _object, render_context & _context)
+		vertex_processing_control(const renderable_type & _object, render_context & _context, vertex_id_t _vertex_id)
 		:
-			vertex_id(0),
+			vertex_id(_vertex_id),
 			object(_object),
 			context(_context)
 		{}
@@ -72,7 +72,8 @@ namespace thrender {
 
 			if (pos.x >= context.vp.width()	|| pos.x < 0
 					|| pos.y > context.vp.height() || pos.y < 0
-					// FixME: Add z cliping by cliping planes || pos.z < context.depth_buffer_near || pos.z > context.depth_buffer_far)
+					|| pos.z > context.depth_range.near() || pos.z < context.depth_range.far()
+					// FixME: Why z must be opposite of near and far?
 				)
 			{
 				discard();
@@ -129,20 +130,20 @@ namespace shaders {
 		//! Reference to renderable object
 		const renderable_type & object;
 
-		//! Vertex processing control object
-		vertex_processing_control<RenderableType> vcontrol;
+		//! Reference to context
+		render_context & context;
 
 		//! Initialize by referencing the wrapped shader
 		vertex_processor_kernel(shader_type & _shader, const renderable_type & _object, render_context & _context)
 		:
 			shader(_shader),
 			object(_object),
-			vcontrol(object, _context)
+			context(_context)
 		{}
 
 		template<class T>
 		void operator()(T & v) {
-			vcontrol.vertex_id = thrust::get<2>(v);
+			vertex_processing_control<renderable_type> vcontrol(object, context, thrust::get<2>(v));
 			thrust::get<1>(v) = thrust::get<0>(v);
 			shader(thrust::get<0>(v), thrust::get<1>(v), vcontrol);
 		}

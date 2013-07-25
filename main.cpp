@@ -95,7 +95,7 @@ void upload_images(thrender::gbuffer & gbuf) {
 }
 
 //glm::mat4 model_rot(1.0f); //tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
-thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 200);
+thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 50);
 
 void process_events() {
     SDL_Event event;
@@ -128,8 +128,9 @@ void render() {
 	typedef thrender::renderable<thrust::tuple<
 			glm::vec4,
 			glm::vec4,
-			glm::vec4> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/cube.ply");
+			glm::vec4,
+			glm::vec2> > mesh_type;
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/tux__.ply");
 
 	thrender::render_context ctx(cam, gbuff);
 	thrender::shaders::default_vertex_shader vx_shader;

@@ -65,90 +65,6 @@ namespace thrender {
 		fragment_processing_control& operator=(const fragment_processing_control&);
 	};
 
-	// Triangle interpolation with barycoords
-	template<class RenderableType>
-	struct triangle_interpolate_draw_pixel {
-
-		typedef RenderableType renderable_type;
-		typedef typename renderable_type::triangle_type triangle_type;
-
-		gbuffer & gbuf;
-		const renderable_type & m;
-
-		triangle_interpolate_draw_pixel(const renderable_type & object, gbuffer & _gbuf)
-		:
-				gbuf(_gbuf),
-				m(object)
-		{}
-
-		bool operator()(int x, int y, const triangle_type * ptri) {
-			size_t coords = coord2d(x,y);
-			float z;
-
-			/** FixMe: Coordinates are passed as integers (floor rounding).
-			 * In small triangles this is out of borders
-			 */
-			glm::vec3 lamdas = math::barycoords(*ptri->positions[0], *ptri->positions[1], *ptri->positions[2], glm::vec2(x,y));
-			z = lamdas.x * ptri->positions[0]->z + lamdas.y * ptri->positions[1]->z + lamdas.z * ptri->positions[2]->z;
-			if (gbuf.depth[coords] > z)	// Z-test
-				return true;
-
-			//std::cout << lamdas.x << ", " << lamdas.y << ", " << lamdas.z << std::endl;
-			//std::cout << lamdas.x << ", " << lamdas.y << ", " << lamdas.z << std::endl;
-			glm::vec4 color =
-					VA_ATTRIBUTE(ptri->vertice(0), COLOR) * lamdas.x+
-					VA_ATTRIBUTE(ptri->vertice(1), COLOR) * lamdas.y+
-					VA_ATTRIBUTE(ptri->vertice(2), COLOR) * lamdas.z;
-			glm::vec4 normal =
-					VA_ATTRIBUTE(ptri->vertice(0), NORMAL) * lamdas.x+
-					VA_ATTRIBUTE(ptri->vertice(1), NORMAL) * lamdas.y+
-					VA_ATTRIBUTE(ptri->vertice(2), NORMAL) * lamdas.z;
-
-			gbuf.depth[coords] = z;
-			gbuf.diffuse.serial_at(coords) = VA_ATTRIBUTE(ptri->vertice(0), COLOR);
-			gbuf.normal[coords] = normal;
-			return true;
-		}
-	};
-
-	template <class RenderableType>
-	struct triangle_single_pixel {
-
-			typedef RenderableType renderable_type;
-			typedef typename renderable_type::triangle_type triangle_type;
-
-			gbuffer & gbuf;
-			const renderable_type & m;
-
-			triangle_single_pixel(const renderable_type & object, gbuffer & _gbuf)
-			:
-					gbuf(_gbuf),
-					m(object)
-			{}
-
-			bool operator()(int x, int y, const triangle_type * ptri) {
-				size_t coords = coord2d(x,y);
-				float z = ptri->positions[0]->z; // 1 Pixel no meaning for median
-
-				if (gbuf.depth[coords] > z)	// Z-test
-					return true;
-
-				glm::vec4 color =
-						VA_ATTRIBUTE(ptri->vertice(0), COLOR) * (1.0f/3.0f)+
-						VA_ATTRIBUTE(ptri->vertice(1), COLOR) * (1.0f/3.0f)+
-						VA_ATTRIBUTE(ptri->vertice(2), COLOR) * (1.0f/3.0f);
-				glm::vec4 normal =
-						VA_ATTRIBUTE(ptri->vertice(0), NORMAL) * (1.0f/3.0f)+
-						VA_ATTRIBUTE(ptri->vertice(1), NORMAL) * (1.0f/3.0f)+
-						VA_ATTRIBUTE(ptri->vertice(2), NORMAL) * (1.0f/3.0f);
-
-				gbuf.depth[coords] = z;
-				gbuf.diffuse.serial_at(coords) = color;
-				gbuf.normal[coords] = normal;
-				return true;
-			}
-		};
-
 namespace shaders {
 
 	template<class RenderableType>
@@ -174,19 +90,15 @@ namespace shaders {
 		//! Type of the primitive
 		typedef typename renderable_type::triangle_type triangle_type;
 
-		triangle_interpolate_draw_pixel<renderable_type> pix_op;
-		triangle_single_pixel<renderable_type> singlepix_op;
-
 		//! Reference to the object that this fragment belongs to.
 		const renderable_type & object;
 
 		//! Reference to current rendering context
 		render_context & context;
 
+		//! Construct the kernel for a specific object and context
 		fragment_processor_kernel(const renderable_type & _object, render_context & _context)
 		:
-			pix_op(_object, _context.fb),
-			singlepix_op(_object, context.fb),
 			object(_object),
 			context(_context)
 		{
@@ -194,7 +106,7 @@ namespace shaders {
 
 		void operator()(const triangle_type & tr)  {
 
-			// If any vertice is discarded, the whole triangle is.
+			// If any vertex is discarded, the whole triangle is.
 			if (object.intermediate_buffer.discarded_vertices[tr.indices[0]]
 				|| object.intermediate_buffer.discarded_vertices[tr.indices[1]]
 				|| object.intermediate_buffer.discarded_vertices[tr.indices[2]])
@@ -224,8 +136,7 @@ namespace shaders {
 					pord[1]->y, mark_contour_op);
 			thrender::math::line_bresenham(pord[1]->x, pord[1]->y, pord[2]->x,
 					pord[2]->y, mark_contour_op);
-			thrender::math::line_bresenham(
-					pord[0]->x, pord[0]->y, pord[2]->x,
+			thrender::math::line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x,
 					pord[2]->y, mark_contour_op);
 
 			// Scan conversion fill

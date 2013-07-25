@@ -41,8 +41,11 @@ namespace thrender {
 	thrust::get<id>(attr_list)
 
 //! The first attribute of all vertices is position
-#define POSITION 0
-#define NORMAL 1
-#define COLOR 2
-#define UV 3
+const static unsigned POSITION = 0;
+//! The second attribute is the normal
+const static unsigned NORMAL = 1;
+//! The third color
+const static unsigned COLOR = 2;
+//! The forth UV
+const static unsigned UV = 3;
 };

@@ -81,6 +81,12 @@ namespace thrender {
 		size_t m_data_size;
 
 		unsigned char * m_data;
+
+	private:
+
+		//non copyable
+		framebuffer(const framebuffer &);
+		framebuffer& operator=(const framebuffer &);
 	};
 
 
