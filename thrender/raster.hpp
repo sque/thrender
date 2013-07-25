@@ -1,32 +1,63 @@
 #pragma once
 
+#include <limits>
+#include <boost/array.hpp>
+#include "./types.hpp"
+
 namespace thrender {
+namespace details {
 
-	//! Structure to hold (convex) polygon horizontal limits
-	struct polygon_horizontal_limits {
+	//! Structure to hold (convex) polygon vertical limits
+	struct polygon_vertical_limits {
 
-		int leftmost[480];
+		//! Type of array
+		typedef boost::array<window_size_t, thrender::max_framebuffer_height> array_type;
 
-		int rightmost[480];
+		//! Leftmost limits
+		array_type leftmost;
 
-		polygon_horizontal_limits() {
-			for (int i = 0; i < 480; i++) {
-				leftmost[i] = 10000;
-				rightmost[i] = 0;
-			}
+		//! Rightmost limits
+		array_type rightmost;
+
+		//! Clear limits by setting default values on them
+		void clear(window_size_t height) {
+			thrust::fill(leftmost.begin(), leftmost.end(), std::numeric_limits<window_size_t>::max());
+			thrust::fill(rightmost.begin(), rightmost.end(), std::numeric_limits<window_size_t>::min());
 		}
 	};
+
+	//! Structure to hold (convex) polygon vertical limits
+	/*struct polygon_vertical_limits {
+
+		thrust::host_vector<window_size_t> leftmost;
+
+		thrust::host_vector<window_size_t> rightmost;
+
+
+		polygon_vertical_limits():
+			leftmost(480, std::numeric_limits<window_size_t>::max()),
+			rightmost(480, std::numeric_limits<window_size_t>::min())
+		{}
+
+
+		void reset(window_size_t height) {
+
+			thrust::fill(leftmost.begin(), leftmost.end(), std::numeric_limits<window_size_t>::max());
+			thrust::fill(rightmost.begin(), rightmost.end(), std::numeric_limits<window_size_t>::min());
+		}
+	};*/
+
 
 	//! Functor to find polygon vertical contour
 	struct mark_vertical_contour {
 
-		polygon_horizontal_limits & limits;
+		polygon_vertical_limits & limits;
 
-		mark_vertical_contour(polygon_horizontal_limits & _limits) :
+		mark_vertical_contour(polygon_vertical_limits & _limits) :
 			limits(_limits)
 		{}
 
-		bool operator()(int x, int y) {
+		bool operator()(window_size_t x, window_size_t y) {
 			if (x < limits.leftmost[y])
 				limits.leftmost[y] = x;
 			if (x > limits.rightmost[y])
@@ -34,4 +65,5 @@ namespace thrender {
 			return true;
 		}
 	};
+}
 }

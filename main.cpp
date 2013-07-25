@@ -129,7 +129,7 @@ void render() {
 			glm::vec4,
 			glm::vec4,
 			glm::vec4> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/tux__.ply");
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/cube.ply");
 
 	thrender::render_context ctx(cam, gbuff);
 	thrender::shaders::default_vertex_shader vx_shader;

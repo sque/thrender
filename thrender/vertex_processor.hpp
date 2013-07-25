@@ -2,7 +2,6 @@
 
 #include "./types.hpp"
 #include "./render_context.hpp"
-#include "./camera.hpp"
 #include "./renderable.hpp"
 #include <thrust/iterator/zip_iterator.h>
 
@@ -144,6 +143,7 @@ namespace shaders {
 		template<class T>
 		void operator()(T & v) {
 			vcontrol.vertex_id = thrust::get<2>(v);
+			thrust::get<1>(v) = thrust::get<0>(v);
 			shader(thrust::get<0>(v), thrust::get<1>(v), vcontrol);
 		}
 

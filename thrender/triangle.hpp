@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include "./math.hpp"
 #include "./vertex_array.hpp"
+#include "./raster.hpp"
 
 namespace thrender {
 
@@ -39,7 +40,19 @@ namespace thrender {
 		}
 
 		//! Default constructor
-		triangle() {}
+		triangle() {
+			std::cout << "empty constructor" << std::endl;
+		}
+
+		triangle(const triangle & rv){
+			//std::cout << "Copied" << std::endl;
+			*this = rv;
+		}
+
+		/*triangle & operator=(const triangle &){
+			std::cout << "assigned" << std::endl;
+			return *this;
+		}*/
 
 		//! Get reference to owner object vertices
 		inline const vertices_type & owner_vertices() const {
@@ -65,10 +78,7 @@ namespace thrender {
 					- atan2f(positions[2]->y - positions[0]->y, positions[2]->x - positions[0]->x);
 			if (adiff < 0)
 				adiff = (M_PI * 2) + adiff;
-			if (adiff < M_PI) {
-				return false;
-			}
-			return true;
+			return (adiff >= M_PI);
 		}
 
 		//! Calculate the size of the smallest bounding box that fits this triangle
@@ -80,6 +90,8 @@ namespace thrender {
 			float y_min = std::min(std::min(positions[0]->y, positions[1]->y), positions[2]->y);
 			return glm::vec2(x_max-x_min, y_max-y_min);
 		}
+
+
 	private:
 
 		//! Pointer to processed vertices list

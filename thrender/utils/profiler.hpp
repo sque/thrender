@@ -5,6 +5,7 @@
 #include <boost/typeof/typeof.hpp>
 #include <vector>
 #include <sstream>
+#include <iomanip>
 
 namespace thrender {
 namespace utils {
@@ -59,7 +60,7 @@ namespace utils {
 	 * It provides the mechanism to record the time
 	 * between two checkpoints.
 	 */
-	template<class CLOCK>
+	template<class CLOCK = boost::chrono::steady_clock>
 	struct profiler{
 
 		//! Type of timer
@@ -195,6 +196,7 @@ namespace utils {
 		//! Pointer to name
 		std::string m_name;
 	};
+
 
 	//! Helper function to easily create the block object
 #	define PROFILE_BLOCK(prof, name) \
