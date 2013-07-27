@@ -7,18 +7,12 @@ namespace thrender {
 
 	typedef size_t coord2d_t;
 
-	//! Convert 2D coordinates to linear 1D (assuming pitch == max(Y)))
-	template<class T>
-	inline coord2d_t coord2d(T x, T y) {
-		return (((y) * 640) + (x));
-	}
-
 	//! Implementation of a naive G-Buffer
 	struct gbuffer {
 
 		typedef framebuffer_<glm::vec4> diffuse_vector;
 		typedef framebuffer_<glm::vec4> normal_vector;
-		typedef framebuffer_<double> depth_vector;
+		typedef framebuffer_<depth_pixel_t> depth_vector;
 
 		unsigned width;
 		unsigned height;
@@ -31,6 +25,15 @@ namespace thrender {
 		normal_vector::value_type clear_normal;
 		depth_vector::value_type clear_depth;
 
+		typedef thrust::tuple<
+				depth_pixel_t &,
+				glm::vec4 &,
+				glm::vec4 &
+				> pixel_type;
+
+		pixel_type get_pixel(unsigned x, unsigned y) {
+			return pixel_type(depth[y][x], diffuse[y][x], normal[y][x]);
+		}
 		gbuffer(unsigned w, unsigned h) :
 			width(w),
 			height(h),
@@ -69,4 +72,9 @@ namespace thrender {
 		}
 	};
 
+#define FB_ATTRIBUTE(attr, pix) \
+	thrust::get<attr>(pix)
+#define FB_DEPTH 0
+#define FB_DIFFUSE 1
+#define FB_NORMAL 2
 }

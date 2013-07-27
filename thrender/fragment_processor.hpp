@@ -32,12 +32,20 @@ namespace thrender {
 		//! Barycoords of the processed pixel
 		glm::vec3 barycoords;
 
+		//! Framebuffer X coordinate of current pixel
+		window_size_t framebuffer_x;
+
+		//! Framebuffer Y coordinate of current pixel
+		window_size_t framebuffer_y;
+
 		//! Construct control on fragment processing
 		fragment_processing_control(const renderable_type & _object, render_context & _context, const triangle_type & _triangle)
 		:
 			object(_object),
 			context(_context),
-			primitive(_triangle)
+			primitive(_triangle),
+			framebuffer_x(0),
+			framebuffer_y(0)
 		{}
 
 		//! Drops the current fragment as discarded
@@ -56,6 +64,8 @@ namespace thrender {
 		}
 
 		void set_coords(float x, float y) {
+			framebuffer_x = x;
+			framebuffer_y = y;
 			barycoords = math::barycoords(*primitive.positions[0], *primitive.positions[1], *primitive.positions[2], glm::vec2(x,y));
 		}
 	private:
@@ -75,10 +85,10 @@ namespace shaders {
 		//typedef typename renderable_type::vertex_type vertex_type;
 
 		template<class RenderableType>
-		void operator()(gbuffer & gbuf, const fragment_processing_control<RenderableType> & fg_control, size_t coords) {
+		void operator()(gbuffer::pixel_type & pixel, const fragment_processing_control<RenderableType> & api) {
 
-			gbuf.diffuse.serial_at(coords) = fg_control.template interpolate<COLOR, glm::vec4>();
-			gbuf.normal.serial_at(coords) = fg_control.template interpolate<NORMAL, glm::vec4>();
+			FB_ATTRIBUTE(FB_DIFFUSE, pixel) = api.template interpolate<COLOR, glm::vec4>();
+			FB_ATTRIBUTE(FB_NORMAL, pixel) = api.template interpolate<NORMAL, glm::vec4>();
 		}
 	};
 }
@@ -147,19 +157,19 @@ namespace shaders {
 			thrender::math::line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x,
 					pord[2]->y, mark_contour_op);
 
+
 			// Scan conversion fill
 			fragment_processing_control<RenderableType> fgcontrol(object, context, tr);
 			for (window_size_t y = pord[2]->y; y <= pord[0]->y; y++) {
 				for (window_size_t x = tri_contour.leftmost[y]; x < tri_contour.rightmost[y]; x++) {
-					size_t coords = coord2d(x,y);
 					fgcontrol.set_coords(x,y);
-
+					gbuffer::pixel_type px =context.fb.get_pixel(x,y);
 					float z = fgcontrol.template interpolate<0, glm::vec4>().z;
 
-					if (context.fb.depth.serial_at(coords) > z)	// Z-test
+					if (FB_ATTRIBUTE(FB_DEPTH, px) > z)	// Z-test
 						continue;
-						context.fb.depth.serial_at(coords) = z;
-					shader(context.fb, fgcontrol, coords);
+					FB_ATTRIBUTE(FB_DEPTH, px) = z;
+					shader(px, fgcontrol);
 				}
 
 			}
