@@ -3,7 +3,7 @@
 #include <SDL.h>
 #include <sstream>
 #include "thrender/framebuffer.hpp"
-
+#include <simdpp/sse3.h>
 
 namespace thrender {
 
@@ -17,7 +17,7 @@ namespace details{
 
 	//! Templated operation to convert a color to SDL uint32 pixel
 	template<class T>
-	struct convert_to_uint32_pixel {
+	struct convert_to_uint32_argb {
 		static inline Uint32 convert(T & px){
 			return (0xFF000000 | ((int) px << 16)
 					| ((int) px << 8) | (int) px);
@@ -26,7 +26,7 @@ namespace details{
 
 	//! Specialization for glm::vec4 color
 	template<>
-	struct convert_to_uint32_pixel<glm::vec4> {
+	struct convert_to_uint32_argb<glm::vec4> {
 		static inline Uint32 convert(glm::vec4 & color){
 			return (0xFF000000 | ((int) color.r << 16)
 					| ((int) color.g << 8) | (int) color.b);
@@ -69,12 +69,42 @@ namespace details{
 			Uint8 * data_ptr = reinterpret_cast<Uint8 *>(lock(texture_pitch));
 
 			for(unsigned row = 0;row < height();++row) {
-				Uint32 * dst_pixel = (Uint32*)(data_ptr + row * texture_pitch);
+				Uint32 * dst = (Uint32*)(data_ptr + row * texture_pitch);
+				T * src = fb[row];
 				for(unsigned col = 0;col < width();++col) {
-					T color = fb[row][col] * 255.0f;
-					*dst_pixel++ = details::convert_to_uint32_pixel<T>::convert(color);
+					T color = (*src++) * 255.0f;
+					*dst++ = details::convert_to_uint32_argb<T>::convert(color);
 				}
 			}
+			unlock();
+		}
+
+
+		void upload2(thrender::framebuffer_<float> & fb){
+			int texture_pitch;
+			Uint8 * data_ptr = reinterpret_cast<Uint8 *>(lock(texture_pitch));
+			simdpp::float32x4 muler = simdpp::float32x4::make_const(255);
+			simdpp::float32x4 fpix;
+			simdpp::int32x4 alpha_mask = simdpp::int32x4::make_const(0xFF000000);
+
+			for(unsigned row = 0;row < height();++row) {
+
+				Uint32 * dst = (Uint32*)(data_ptr + row * texture_pitch);
+				float * src = fb[row];
+				for(unsigned col = 0;col < width();col+=4) {
+					simdpp::load(fpix, src);
+					simdpp::int32x4 xmm_ucolor = simdpp::to_int32x4(simdpp::mul(fpix, muler));
+					simdpp::int32x4 extra_bits = simdpp::shift_l(xmm_ucolor, 8);
+					xmm_ucolor= simdpp::bit_or(xmm_ucolor, extra_bits);
+					extra_bits = simdpp::shift_l(extra_bits, 8);
+					xmm_ucolor= simdpp::bit_or(xmm_ucolor, extra_bits);
+					xmm_ucolor= simdpp::bit_or(xmm_ucolor, alpha_mask);
+					simdpp::stream(dst, xmm_ucolor);
+					dst+=4;
+					src+=4;
+				}
+			}
+			_mm_empty();
 			unlock();
 		}
 

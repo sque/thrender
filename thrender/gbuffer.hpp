@@ -18,7 +18,7 @@ namespace thrender {
 
 		typedef framebuffer_<glm::vec4> diffuse_vector;
 		typedef framebuffer_<glm::vec4> normal_vector;
-		typedef framebuffer_<double> depth_vector;
+		typedef framebuffer_<depth_pixel_t> depth_vector;
 
 		unsigned width;
 		unsigned height;

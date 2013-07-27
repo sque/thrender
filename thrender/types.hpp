@@ -15,7 +15,7 @@ namespace thrender {
 	typedef unsigned short pitch_t;
 
 	//! Type of depth pixel
-	typedef double depth_pixel_t;
+	typedef float depth_pixel_t;
 
 	//! Type of 3 part indices
 	typedef glm::uvec3 indices3_t;

@@ -30,15 +30,24 @@ thrender::texture * tex_normals;
 thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 50);
 
 void upload_images(thrender::gbuffer & gbuf) {
+	//thrender::utils::profiler<> prof("test");
+	{//	PROFILE_BLOCK(prof, "non-smd method");
+		tex_diffuse->upload(gbuf.diffuse);
+	}
+	{//	PROFILE_BLOCK(prof, "smd method");
+		tex_normals->upload(gbuf.normal);
+	}
+	{//	PROFILE_BLOCK(prof, "float non-smd");
+		tex_depth->upload2(gbuf.depth);
+	}
 
-	tex_diffuse->upload(gbuf.diffuse);
-	tex_normals->upload(gbuf.normal);
-	tex_depth->upload(gbuf.depth);
 
 	window->copy(0, 0, *tex_diffuse);
 	window->copy(640, 0, *tex_depth);
 	window->copy(640, 480, *tex_normals);
 	window->update();
+
+//	std::cout << prof.report() << std::endl;
 }
 
 void process_events() {
