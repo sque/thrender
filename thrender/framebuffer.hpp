@@ -1,6 +1,7 @@
 #pragma once
 
 #include "./types.hpp"
+#include <thrust/fill.h>
 
 namespace thrender {
 

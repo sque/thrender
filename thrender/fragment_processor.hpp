@@ -78,7 +78,7 @@ namespace shaders {
 		void operator()(gbuffer & gbuf, const fragment_processing_control<RenderableType> & fg_control, size_t coords) {
 
 			gbuf.diffuse.serial_at(coords) = fg_control.template interpolate<COLOR, glm::vec4>();
-			gbuf.normal[coords] = fg_control.template interpolate<NORMAL, glm::vec4>();
+			gbuf.normal.serial_at(coords) = fg_control.template interpolate<NORMAL, glm::vec4>();
 		}
 	};
 }
@@ -156,9 +156,9 @@ namespace shaders {
 
 					float z = fgcontrol.template interpolate<0, glm::vec4>().z;
 
-					if (context.fb.depth[coords] > z)	// Z-test
+					if (context.fb.depth.serial_at(coords) > z)	// Z-test
 						continue;
-						context.fb.depth[coords] = z;
+						context.fb.depth.serial_at(coords) = z;
 					shader(context.fb, fgcontrol, coords);
 				}
 

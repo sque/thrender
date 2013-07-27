@@ -15,88 +15,31 @@
 #include <iostream>
 #include <fstream>
 
-#include <SDL.h>
 #include "thrender/thrender.hpp"
 #include "thrender/utils/io.hpp"
 #include "thrender/utils/to_string.hpp"
 #include "thrender/utils/frame_rate_keeper.hpp"
 #include "thrender/utils/profiler.hpp"
 #include "thrender/pipeline.hpp"
+#include "thrender/exp/gui.hpp"
 
-#define PI	3.141593
-#define HPI	(PI / 2.0f)
-#define PI2	(2 * PI)
-
-
-SDL_Window * window;
-SDL_Renderer * renderer;
-SDL_Texture * tex_diffuse;
-SDL_Texture * tex_depth;
-SDL_Texture * tex_normals;
+thrender::window * window;
+thrender::texture * tex_diffuse;
+thrender::texture * tex_depth;
+thrender::texture * tex_normals;
+thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 50);
 
 void upload_images(thrender::gbuffer & gbuf) {
 
-	long src_index = 0;
-	Uint32 *dst_dif, *dst_depth, *dst_normals;
-	int row, col;
-	void *pixels_dif;
-	void *pixels_depth;
-	void *pixels_normals;
-	int pitch_dif, pitch_depth, pitch_normals;
-	SDL_Rect dstrect;
+	tex_diffuse->upload(gbuf.diffuse);
+	tex_normals->upload(gbuf.normal);
+	tex_depth->upload(gbuf.depth);
 
-	if (SDL_LockTexture(tex_diffuse, NULL, &pixels_dif, &pitch_dif) < 0) {
-		std::cerr << "Couldn't lock texture:" << SDL_GetError() << std::endl;
-		return;
-	}
-	if (SDL_LockTexture(tex_depth, NULL, &pixels_depth, &pitch_depth) < 0) {
-		std::cerr << "Couldn't lock texture:" << SDL_GetError() << std::endl;
-		return;
-	}
-	if (SDL_LockTexture(tex_normals, NULL, &pixels_normals, &pitch_normals) < 0) {
-		std::cerr << "Couldn't lock texture:" << SDL_GetError() << std::endl;
-		return;
-	}
-
-	for (row = 0; row < 480; ++row) {
-		dst_dif = (Uint32*) ((Uint8*) pixels_dif + row * pitch_dif);
-		dst_depth = (Uint32*) ((Uint8*) pixels_depth + row * pitch_depth);
-		dst_normals = (Uint32*) ((Uint8*) pixels_normals + row * pitch_normals);
-
-		for (col = 0; col < 640; ++col) {
-			glm::vec4 color = gbuf.diffuse.serial_at(src_index++) * 255.0f;
-			glm::vec4 normal = gbuf.normal[src_index] * 255.0f;
-			float d = gbuf.depth[src_index] * 255.0f;
-			//*dst++ = (0xFF000000|(color.r << 16)|(color.g << 8) | color.b);
-			*dst_dif++ = (0xFF000000 | ((int) color.r << 16)
-					| ((int) color.g << 8) | (int) color.b);
-			*dst_depth++ = (((int) d << 16) | ((int) d << 8) | (int) d);
-			*dst_normals++ = (0xFF000000 | ((int) normal.r << 16)
-								| ((int) normal.g << 8) | (int) normal.b);
-
-		}
-	}
-
-	SDL_UnlockTexture(tex_normals);
-	SDL_UnlockTexture(tex_depth);
-	SDL_UnlockTexture(tex_diffuse);
-	SDL_RenderClear(renderer);
-	dstrect.h = 480;
-	dstrect.w = 640;
-	dstrect.x = 0;
-	dstrect.y = 0;
-	SDL_RenderCopy(renderer, tex_diffuse, NULL, &dstrect);
-	dstrect.x = 640;
-	SDL_RenderCopy(renderer, tex_depth, NULL, &dstrect);
-	dstrect.y = 480;
-	dstrect.x = 640;
-	SDL_RenderCopy(renderer, tex_normals, NULL, &dstrect);
-	SDL_RenderPresent(renderer);
-
+	window->copy(0, 0, *tex_diffuse);
+	window->copy(640, 0, *tex_depth);
+	window->copy(640, 480, *tex_normals);
+	window->update();
 }
-
-//glm::mat4 model_rot(1.0f); //tux.model_mat = glm::rotate(tux.model_mat, 10.0f, glm::vec3(0, 1, 0));
-thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 50);
 
 void process_events() {
     SDL_Event event;
@@ -131,7 +74,7 @@ void render() {
 			glm::vec4,
 			glm::vec4,
 			glm::vec2> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/cube.ply");
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/tux__.ply");
 
 	thrender::render_context ctx(cam, gbuff);
 	thrender::shaders::default_vertex_shader vx_shader;
@@ -156,7 +99,7 @@ void render() {
 		}
 		{
 			PROFILE_BLOCK(prof, "Pipelined 500 render");
-
+/*
 			for(int k =0;k < 500;k++){
 				glm::mat4 model_mat(1.0f);
 				model_mat = glm::translate(model_mat, glm::vec3(0,0,0.5*k));
@@ -164,6 +107,7 @@ void render() {
 				vx_shader.mvp_mat = ctx.cam.projection_mat * ctx.cam.view_mat * model_mat;
 				pp.draw(tux, ctx);
 			}
+			*/
 		}
 
 		{	PROFILE_BLOCK(prof, "Upload images");
@@ -180,44 +124,11 @@ void render() {
 }
 
 int main() {
-	if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO) < 0) {
-		std::cerr << "Unable to init SDL:" << SDL_GetError() << std::endl;
-		return 1;
-	}
 
-	window = SDL_CreateWindow("Thrust Renderer", SDL_WINDOWPOS_UNDEFINED,
-			SDL_WINDOWPOS_UNDEFINED, 640 * 2, 480 * 2,
-			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
-
-	renderer = SDL_CreateRenderer(window, -1, 0);
-	if (!renderer) {
-		std::cerr << "Couldn't set create renderer:" << SDL_GetError()
-				<< std::endl;
-	}
-
-	tex_diffuse = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
-			SDL_TEXTUREACCESS_STREAMING, 640, 480);
-	if (!tex_diffuse) {
-		std::cerr << "Couldn't set create texture:" << SDL_GetError()
-				<< std::endl;
-		return 5;
-	}
-
-	tex_depth = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888,
-			SDL_TEXTUREACCESS_STREAMING, 640, 480);
-	if (!tex_depth) {
-		std::cerr << "Couldn't set create texture:" << SDL_GetError()
-				<< std::endl;
-		return 5;
-	}
-
-	tex_normals = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888,
-				SDL_TEXTUREACCESS_STREAMING, 640, 480);
-	if (!tex_normals) {
-		std::cerr << "Couldn't set create texture:" << SDL_GetError()
-				<< std::endl;
-		return 5;
-	}
+	window = new thrender::window("Thrust Renderer",640 * 2, 480 * 2);
+	tex_diffuse = new thrender::texture(window->renderer_handle(), 640, 480);
+	tex_depth = new thrender::texture(window->renderer_handle(), 640, 480);
+	tex_normals = new thrender::texture(window->renderer_handle(), 640, 480);
 
 	std::cout << "Initilized SDL" << std::endl;
 	render();

@@ -17,8 +17,8 @@ namespace thrender {
 	struct gbuffer {
 
 		typedef framebuffer_<glm::vec4> diffuse_vector;
-		typedef thrust::host_vector<glm::vec4> normal_vector;
-		typedef thrust::host_vector<double> depth_vector;
+		typedef framebuffer_<glm::vec4> normal_vector;
+		typedef framebuffer_<double> depth_vector;
 
 		unsigned width;
 		unsigned height;
@@ -35,8 +35,8 @@ namespace thrender {
 			width(w),
 			height(h),
 			diffuse(width, height),
-			normal(width * height),
-			depth(width * height){
+			normal(width, height),
+			depth(width, height){
 
 			set_clear_values(
 				glm::vec4(1.0f,1.0f,1.0f,1.0f),
