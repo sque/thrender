@@ -75,12 +75,14 @@ void render() {
 			glm::vec4,
 			glm::vec2> > mesh_type;
 	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/tux__.ply");
+	std::cout << thrender::utils::to_string(tux) << std::endl;
 
 	thrender::render_context ctx(cam, gbuff);
 	thrender::shaders::default_vertex_shader vx_shader;
 	thrender::shaders::default_fragment_shader fg_shader;
 	thrender::pipeline<mesh_type,thrender::shaders::default_vertex_shader, thrender::shaders::default_fragment_shader> pp(vx_shader, fg_shader);
 	vx_shader.mvp_mat = ctx.cam.projection_mat * ctx.cam.view_mat;
+
 
 
 

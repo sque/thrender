@@ -3,6 +3,7 @@
 #include <limits>
 #include <boost/array.hpp>
 #include "./types.hpp"
+#include "./math.hpp"
 
 namespace thrender {
 namespace details {
@@ -20,7 +21,7 @@ namespace details {
 		array_type rightmost;
 
 		//! Clear limits by setting default values on them
-		void clear(window_size_t height) {
+		void clear() {
 			thrust::fill(leftmost.begin(), leftmost.end(), std::numeric_limits<window_size_t>::max());
 			thrust::fill(rightmost.begin(), rightmost.end(), std::numeric_limits<window_size_t>::min());
 		}
@@ -65,5 +66,20 @@ namespace details {
 			return true;
 		}
 	};
+/*
+	template<class PrimitiveType>
+	details::polygon_vertical_limits get_primitive_contour(){
+		details::polygon_vertical_limits tri_contour;
+
+		tri_contour.clear();
+		mark_vertical_contour mark_contour_op(tri_contour);
+		thrender::math::line_bresenham(pord[0]->x, pord[0]->y, pord[1]->x,
+			pord[1]->y, mark_contour_op);
+		thrender::math::line_bresenham(pord[1]->x, pord[1]->y, pord[2]->x,
+			pord[2]->y, mark_contour_op);
+		thrender::math::line_bresenham(pord[0]->x, pord[0]->y, pord[2]->x,
+			pord[2]->y, mark_contour_op);
+	}
+*/
 }
 }

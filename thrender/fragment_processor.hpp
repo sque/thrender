@@ -141,15 +141,23 @@ namespace shaders {
 			const glm::vec4 * pord[3] = {tr.positions[0], tr.positions[1], tr.positions[2]};
 			math::sort3vec_by_y(pord);
 
-			/*glm::vec2 size = tr.bounding_box();
-			if (size.y < 1.0f && size.x < 1.0f) {
-				singlepix_op(pord[0]->x, pord[1]->y, &tr);
+			fragment_processing_control<RenderableType> fgcontrol(object, context, tr);
+
+			// One pixel fragment
+			glm::vec4 bounding_box = tr.bounding_box();
+			if (bounding_box[3] < 1.0f && bounding_box[2] < 1.0f) {
+				gbuffer::pixel_type px =context.fb.get_pixel(tr.positions[0]->x, tr.positions[1]->y);
+				fgcontrol.set_coords(tr.positions[0]->x, tr.positions[1]->y);
+				if (FB_ATTRIBUTE(FB_DEPTH, px) > tr.positions[0]->z)	// Z-test
+					return;
+				FB_ATTRIBUTE(FB_DEPTH, px) = tr.positions[0]->z;
+				shader(px, fgcontrol);
 				return;
-			}*/
+			}
 
 			// Find triangle contour
 			details::polygon_vertical_limits tri_contour;
-			tri_contour.clear(context.vp.height());
+			tri_contour.clear();
 			details::mark_vertical_contour mark_contour_op(tri_contour);
 			thrender::math::line_bresenham(pord[0]->x, pord[0]->y, pord[1]->x,
 					pord[1]->y, mark_contour_op);
@@ -160,8 +168,7 @@ namespace shaders {
 
 
 			// Scan conversion fill
-			fragment_processing_control<RenderableType> fgcontrol(object, context, tr);
-			for (window_size_t y = pord[2]->y; y <= pord[0]->y; y++) {
+			for (window_size_t y = bounding_box[1]; y <= bounding_box[1]+ bounding_box[3]; y++) {
 				for (window_size_t x = tri_contour.leftmost[y]; x < tri_contour.rightmost[y]; x++) {
 					fgcontrol.set_coords(x,y);
 					gbuffer::pixel_type px =context.fb.get_pixel(x,y);

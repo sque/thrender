@@ -82,13 +82,17 @@ namespace thrender {
 		}
 
 		//! Calculate the size of the smallest bounding box that fits this triangle
-		glm::vec2 bounding_box() const {
+		/**
+		 * Returns a vec4 value where 0,1 elements are the coordinates of the top left
+		 * corner of the box and 2,3 elements are the width and height of the box.
+		 */
+		glm::vec4 bounding_box() const {
 			float x_max = std::max(std::max(positions[0]->x, positions[1]->x), positions[2]->x);
 			float x_min = std::min(std::min(positions[0]->x, positions[1]->x), positions[2]->x);
 
 			float y_max = std::max(std::max(positions[0]->y, positions[1]->y), positions[2]->y);
 			float y_min = std::min(std::min(positions[0]->y, positions[1]->y), positions[2]->y);
-			return glm::vec2(x_max-x_min, y_max-y_min);
+			return glm::vec4(x_min, y_min, x_max-x_min, y_max-y_min);
 		}
 
 

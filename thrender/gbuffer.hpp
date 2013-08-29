@@ -72,9 +72,4 @@ namespace thrender {
 		}
 	};
 
-#define FB_ATTRIBUTE(attr, pix) \
-	thrust::get<attr>(pix)
-#define FB_DEPTH 0
-#define FB_DIFFUSE 1
-#define FB_NORMAL 2
 }
