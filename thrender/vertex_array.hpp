@@ -29,6 +29,7 @@ namespace thrender {
 		inline static size_t total_attributes() {
 			return thrust::tuple_size<vertex_type>::value;
 		}
+
 	};
 
 #define VA_VERTEX_BEGIN() \

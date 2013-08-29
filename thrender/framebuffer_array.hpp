@@ -6,17 +6,7 @@
 
 namespace thrender {
 
-	typedef thrust::tuple<
-		depth_pixel_t,
-		glm::vec4,
-		glm::vec4
-	> pixel_array_type;
 
-	template<class PixelArrayType>
-	struct framebuffer_array_2{
-
-		typedef PixelArrayType pixel_array_type;
-	};
 	struct framebuffer_array {
 
 		typedef std::vector<boost::shared_ptr<framebuffer> > extra_buffers_type;

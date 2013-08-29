@@ -68,27 +68,28 @@ namespace thrender {
 			framebuffer_y = y;
 			barycoords = math::barycoords(*primitive.positions[0], *primitive.positions[1], *primitive.positions[2], glm::vec2(x,y));
 		}
-	private:
 
 		// non-copyable
-		fragment_processing_control(const fragment_processing_control&);
-		fragment_processing_control& operator=(const fragment_processing_control&);
+		fragment_processing_control(const fragment_processing_control&) = delete;
+		fragment_processing_control& operator=(const fragment_processing_control&) = delete;
 	};
+
+//! Macro to query a vertex attribute, interpolated
+#define INTERPOLATE(attribute) \
+		api.template interpolate<attribute, \
+			typename thrust::tuple_element<attribute, \
+				typename std::remove_reference<decltype(api.object)>::type::vertex_type>::type>()
+
 
 namespace shaders {
 
-
 	struct default_fragment_shader {
-
-//		typedef RenderableType renderable_type;
-
-		//typedef typename renderable_type::vertex_type vertex_type;
 
 		template<class RenderableType>
 		void operator()(gbuffer::pixel_type & pixel, const fragment_processing_control<RenderableType> & api) {
 
-			FB_ATTRIBUTE(FB_DIFFUSE, pixel) = api.template interpolate<COLOR, glm::vec4>();
-			FB_ATTRIBUTE(FB_NORMAL, pixel) = api.template interpolate<NORMAL, glm::vec4>();
+			FB_ATTRIBUTE(FB_DIFFUSE, pixel) = INTERPOLATE(COLOR);
+			FB_ATTRIBUTE(FB_NORMAL, pixel) = INTERPOLATE(NORMAL);
 		}
 	};
 }
