@@ -67,15 +67,15 @@ namespace thrender {
 	struct render_context {
 
 
-		gbuffer & fb;
+		framebuffer_array & fb;
 		camera & cam;
 		viewport vp;
 		depth_range_tk depth_range;
 
-		render_context(camera & _camera, gbuffer & _gbuffer) :
-			fb(_gbuffer),
+		render_context(camera & _camera, framebuffer_array & _fb) :
+			fb(_fb),
 			cam(_camera),
-			vp(0, 0, fb.width, fb.height),
+			vp(0, 0, fb.width(), fb.height()),
 			depth_range(1, 0)
 		{}
 

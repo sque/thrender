@@ -6,7 +6,7 @@
 namespace thrender {
 
 	/**
-	 * @brief Abstract framebuffer inplementation
+	 * @brief Abstract framebuffer implementation
 	 *
 	 * A framebuffer container of any type and size
 	 */
@@ -163,7 +163,7 @@ namespace thrender {
 			return framebuffer::serial_at<pixel_type>(index);
 		}
 
-		inline void clear(pixel_type & value) {
+		inline void clear(pixel_type value) {
 			thrust::fill(begin(), end(), value);
 		}
 

@@ -29,11 +29,11 @@ thrender::texture * tex_depth;
 thrender::texture * tex_normals;
 thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 50);
 
-void upload_images(thrender::gbuffer & gbuf) {
+void upload_images(thrender::framebuffer_array & fb) {
 
-	tex_diffuse->upload(gbuf.diffuse);
-	tex_normals->upload(gbuf.normal);
-	tex_depth->upload(gbuf.depth);
+	tex_diffuse->upload(*fb.color_buffer);
+	tex_normals->upload(*fb.extra_buffers[0]);
+	tex_depth->upload(*fb.depth_buffer);
 
 	window->copy(0, 0, *tex_diffuse);
 	window->copy(640, 0, *tex_depth);
@@ -66,8 +66,8 @@ void process_events() {
 }
 void render() {
 
-	thrender::gbuffer gbuff(640, 480);
-	gbuff.set_clear_diffuse(glm::vec4(0, 0, 0, 1));
+	thrender::framebuffer_array gbuff(640, 480);
+	//gbuff.set_clear_diffuse(glm::vec4(0, 0, 0, 1));
 
 	typedef thrender::renderable<thrust::tuple<
 			glm::vec4,

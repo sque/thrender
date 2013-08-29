@@ -146,7 +146,7 @@ namespace shaders {
 			// One pixel fragment
 			glm::vec4 bounding_box = tr.bounding_box();
 			if (bounding_box[3] < 1.0f && bounding_box[2] < 1.0f) {
-				gbuffer::pixel_type px =context.fb.get_pixel(tr.positions[0]->x, tr.positions[1]->y);
+				gbuffer::pixel_type px = context.fb.get_pixel(tr.positions[0]->x, tr.positions[1]->y);
 				fgcontrol.set_coords(tr.positions[0]->x, tr.positions[1]->y);
 				if (FB_ATTRIBUTE(FB_DEPTH, px) > tr.positions[0]->z)	// Z-test
 					return;
@@ -171,7 +171,7 @@ namespace shaders {
 			for (window_size_t y = bounding_box[1]; y <= bounding_box[1]+ bounding_box[3]; y++) {
 				for (window_size_t x = tri_contour.leftmost[y]; x < tri_contour.rightmost[y]; x++) {
 					fgcontrol.set_coords(x,y);
-					gbuffer::pixel_type px =context.fb.get_pixel(x,y);
+					gbuffer::pixel_type px = context.fb.get_pixel(x,y);
 					float z = fgcontrol.template interpolate<0, glm::vec4>().z;
 
 					if (FB_ATTRIBUTE(FB_DEPTH, px) > z)	// Z-test
