@@ -1,7 +1,7 @@
 #pragma once
 
 #include "./raster.hpp"
-#include "./gbuffer.hpp"
+#include "./render_context.hpp"
 #include "./vertex_array.hpp"
 #include "./math.hpp"
 #include "./utils/profiler.hpp"
@@ -80,16 +80,18 @@ namespace thrender {
 			typename thrust::tuple_element<attribute, \
 				typename std::remove_reference<decltype(api.object)>::type::vertex_type>::type>()
 
+#define FB_PIXEL(buffer) \
+	buffer[api.framebuffer_y][api.framebuffer_x]
 
 namespace shaders {
 
 	struct default_fragment_shader {
 
 		template<class RenderableType>
-		void operator()(gbuffer::pixel_type & pixel, const fragment_processing_control<RenderableType> & api) {
+		void operator()(framebuffer_array & fb, const fragment_processing_control<RenderableType> & api) {
 
-			FB_ATTRIBUTE(FB_DIFFUSE, pixel) = INTERPOLATE(COLOR);
-			FB_ATTRIBUTE(FB_NORMAL, pixel) = INTERPOLATE(NORMAL);
+			FB_PIXEL(fb.color_buffer()) = INTERPOLATE(COLOR);
+			FB_PIXEL(fb.extra_buffer(0)) = INTERPOLATE(NORMAL);
 		}
 	};
 }
@@ -146,12 +148,11 @@ namespace shaders {
 			// One pixel fragment
 			glm::vec4 bounding_box = tr.bounding_box();
 			if (bounding_box[3] < 1.0f && bounding_box[2] < 1.0f) {
-				gbuffer::pixel_type px = context.fb.get_pixel(tr.positions[0]->x, tr.positions[1]->y);
 				fgcontrol.set_coords(tr.positions[0]->x, tr.positions[1]->y);
-				if (FB_ATTRIBUTE(FB_DEPTH, px) > tr.positions[0]->z)	// Z-test
+				if (context.fb.depth_buffer()[fgcontrol.framebuffer_y][fgcontrol.framebuffer_x] > tr.positions[0]->z)	// Z-test
 					return;
-				FB_ATTRIBUTE(FB_DEPTH, px) = tr.positions[0]->z;
-				shader(px, fgcontrol);
+				context.fb.depth_buffer()[fgcontrol.framebuffer_y][fgcontrol.framebuffer_x] = tr.positions[0]->z;
+				shader(context.fb, fgcontrol);
 				return;
 			}
 
@@ -171,13 +172,11 @@ namespace shaders {
 			for (window_size_t y = bounding_box[1]; y <= bounding_box[1]+ bounding_box[3]; y++) {
 				for (window_size_t x = tri_contour.leftmost[y]; x < tri_contour.rightmost[y]; x++) {
 					fgcontrol.set_coords(x,y);
-					gbuffer::pixel_type px = context.fb.get_pixel(x,y);
 					float z = fgcontrol.template interpolate<0, glm::vec4>().z;
-
-					if (FB_ATTRIBUTE(FB_DEPTH, px) > z)	// Z-test
+					if (context.fb.depth_buffer()[y][x] > z)	// Z-test
 						continue;
-					FB_ATTRIBUTE(FB_DEPTH, px) = z;
-					shader(px, fgcontrol);
+					context.fb.depth_buffer()[y][x] = z;
+					shader(context.fb, fgcontrol);
 				}
 
 			}

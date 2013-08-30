@@ -27,37 +27,43 @@ namespace thrender {
 			delete m_data;
 		}
 
-		//! Element access operator
+		//! Row access operator
 		/**
-		 * It will access the indice based on the size of pixel type
+		 * It will give access to the specified buffer row
 		 */
 		template<class PixelType>
 		inline PixelType * operator[](size_t row) {
 			return reinterpret_cast<PixelType *>(m_data) + (row * m_pitch);
 		}
 
-		//! Element access operator (const)
+		//! Row access operator (const)
+		/**
+		 * It will give access to the specified buffer row
+		 */
 		template<class PixelType>
 		inline const PixelType * operator[](size_t row) const {
 			return reinterpret_cast<const PixelType *>(m_data) + (row * m_pitch);
 		}
 
-		//! Element access at the nth pixel
+		//! Direct element access at the buffer storage
 		/**
-		 * Fixme: It does not take in account the pitching
+		 * @note It does not take in account the pitching
 		 */
 		template<class PixelType>
 		inline PixelType & serial_at(size_t index) {
 			return *(reinterpret_cast<PixelType *>(m_data) + index);
 		}
 
-		//! Element access at the nth pixel
+		//! Direct element access at the buffer storage (const)
+		/**
+		 * @note It does not take in account the pitching
+		 */
 		template<class PixelType>
 		inline const PixelType & serial_at(size_t index) const{
 			return *(reinterpret_cast<const PixelType *>(m_data) + index);
 		}
 
-		//! Pointer to raw data
+		//! Access to raw data
 		inline unsigned char * raw_data() {
 			return m_data;
 		}
@@ -163,10 +169,16 @@ namespace thrender {
 			return framebuffer::serial_at<pixel_type>(index);
 		}
 
-		inline void clear(pixel_type value) {
-			thrust::fill(begin(), end(), value);
+		inline void set_clear_value(pixel_type value) {
+			m_clear_value = value;
 		}
 
+		inline void clear() {
+			thrust::fill(begin(), end(), m_clear_value);
+		}
+
+	private:
+		pixel_type m_clear_value;
 	};
 
 }

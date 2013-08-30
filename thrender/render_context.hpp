@@ -1,6 +1,6 @@
 #pragma once
 
-#include "./gbuffer.hpp"
+#include "./framebuffer_array.hpp"
 #include "./camera.hpp"
 #include "./types.hpp"
 #include "./viewport.hpp"
