@@ -89,9 +89,7 @@ namespace shaders {
 
 		template<class RenderableType>
 		void operator()(framebuffer_array & fb, const fragment_processing_control<RenderableType> & api) {
-
 			FB_PIXEL(fb.color_buffer()) = INTERPOLATE(COLOR);
-			FB_PIXEL(fb.extra_buffer(0)) = INTERPOLATE(NORMAL);
 		}
 	};
 }

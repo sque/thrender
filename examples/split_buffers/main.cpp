@@ -31,9 +31,9 @@ thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 50);
 
 void upload_images(thrender::framebuffer_array & fb) {
 
-	tex_diffuse->upload(*fb.color_buffer);
-	tex_normals->upload(*fb.extra_buffers[0]);
-	tex_depth->upload(*fb.depth_buffer);
+	tex_diffuse->upload(fb.color_buffer());
+	tex_normals->upload(fb.extra_buffer(0));
+	tex_depth->upload(fb.depth_buffer());
 
 	window->copy(0, 0, *tex_diffuse);
 	window->copy(640, 0, *tex_depth);
@@ -67,14 +67,15 @@ void process_events() {
 void render() {
 
 	thrender::framebuffer_array gbuff(640, 480);
-	//gbuff.set_clear_diffuse(glm::vec4(0, 0, 0, 1));
+	gbuff.add_extra_buffer();
+	gbuff.extra_buffer(0).set_clear_value(glm::vec4(0.2, 0.2, 0.2, 1));
 
 	typedef thrender::renderable<thrust::tuple<
 			glm::vec4,
 			glm::vec4,
 			glm::vec4,
 			glm::vec2> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/tux__.ply");
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/monkey_500k.stl");
 	std::cout << thrender::utils::to_string(tux) << std::endl;
 
 	thrender::render_context ctx(cam, gbuff);
@@ -91,7 +92,7 @@ void render() {
 	for (int i = 1; i < 150000; i++) {
 		prof.clear();
 		{	PROFILE_BLOCK(prof, "Clear buffer");
-			gbuff.clear();
+			gbuff.clear_all();
 		}
 		{	PROFILE_BLOCK(prof, "Process vertices");
 			thrender::process_vertices(tux, vx_shader, ctx);

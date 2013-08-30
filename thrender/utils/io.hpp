@@ -54,7 +54,8 @@ namespace utils {
 			if (m->HasVertexColors(0))
 				VA_ATTRIBUTE(outm.vertices[i], COLOR) = glm::make_vec4(&m->mColors[i]->r);
 			else
-				VA_ATTRIBUTE(outm.vertices[i], COLOR) = glm::vec4(one(rng), one(rng), one(rng), 1.0f);
+				//VA_ATTRIBUTE(outm.vertices[i], COLOR) = glm::vec4(one(rng), one(rng), one(rng), 1.0f);
+				VA_ATTRIBUTE(outm.vertices[i], COLOR) = glm::vec4(0.8, 0.8, 0.8, 1.0f);
 			//if (m->HasTextureCoords(0))
 				//VA_ATTRIBUTE(outm.vertices[i], UV) = glm::make_vec2(&m->mTextureCoords[i]->x);
 		}
