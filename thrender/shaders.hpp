@@ -37,10 +37,26 @@ struct phong_material {
 	//! Color of the material in the shinny spots
 	color_pixel_t specular_color;
 
+	//! Shininess of the specularity
+	float shininess;
+
 	//! Emissive lighting
 	color_pixel_t emissive_color;
 };
 
+//! Vertex shader base class
+/**
+ * TODO: Add this base class for declaring extra hooks
+ * like pre-processing, post-processing etc.
+ */
+struct vx_shader {
+
+	virtual void prepare(render_context & ctx) {
+
+	}
+
+	virtual ~vx_shader(){}
+};
 
 //! Implementation of a Gouraud shading (per vertex)
 /**
@@ -79,11 +95,15 @@ struct gouraud_vx_shader {
 		glm::vec4 vNormal_ws = glm::normalize(mModel * normIn);
 		glm::vec4 vPos_ws = glm::normalize(mModel * posIn);
 		glm::vec4 vLightDirection = glm::normalize(vPos_ws - light.position_ws);
+		glm::vec4 vCameraDirection = glm::normalize(vPos_ws - vCameraPos_ws);
+		glm::vec4 vReflectedLight = glm::normalize(glm::reflect(-vLightDirection, vNormal_ws));
+
 		float fDiffuseIntensity = glm::max(0.0f, glm::dot( vNormal_ws, vLightDirection ));
+		float fSpecularIntensity = glm::pow(glm::max(0.0f, glm::dot(vReflectedLight, vCameraDirection)), material.shininess);
 
 		glm::vec4 cDiffuse = light.diffuse_color * material.diffuse_color * fDiffuseIntensity;
-		//glm::vec4 cDiffuse = light.specular_color *
-		VA_ATTRIBUTE(vout, COLOR) = material.emissive_color + cDiffuse;
+		glm::vec4 cSpecular = light.specular_color * material.specular_color * fSpecularIntensity;
+		VA_ATTRIBUTE(vout, COLOR) = material.emissive_color + cDiffuse + cSpecular;
 	}
 };
 

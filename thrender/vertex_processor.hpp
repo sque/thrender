@@ -72,7 +72,7 @@ namespace thrender {
 
 			if (pos.x >= context.vp.width()	|| pos.x < 0
 					|| pos.y > context.vp.height() || pos.y < 0
-					|| pos.z > context.depth_range.near() || pos.z < context.depth_range.far()
+					|| pos.z < context.depth_range.near() || pos.z > context.depth_range.far()
 					// FixME: Why z must be opposite of near and far?
 				)
 			{

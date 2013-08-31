@@ -41,8 +41,8 @@ namespace thrender {
 		//! Translate an NDC z value to window space
 		inline depth_pixel_t translate_to_window_space(depth_pixel_t z) const {
 			return z * m_half_distance + m_half_sum;
-
 		}
+
 	private:
 
 		//! Depth buffer value for near plane
@@ -76,7 +76,7 @@ namespace thrender {
 			fb(_fb),
 			cam(_camera),
 			vp(0, 0, fb.width(), fb.height()),
-			depth_range(1, 0)
+			depth_range(0, 1)
 		{}
 
 

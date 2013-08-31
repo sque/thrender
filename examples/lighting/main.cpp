@@ -24,7 +24,7 @@
 
 thrender::window * window;
 thrender::texture * tex_diffuse;
-thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 50);
+thrender::camera cam(glm::vec3(0, 0, -10), 45, 4.0f / 3.0f, 5, 50);
 
 void upload_images(thrender::framebuffer_array & fb) {
 
@@ -45,7 +45,7 @@ void process_events() {
                        event.motion.x, event.motion.y);*/
             	if (event.motion.state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
             		cam.view_mat = glm::rotate(cam.view_mat, float(event.motion.xrel), glm::vec3(0, 1, 0));
-            		cam.view_mat = glm::rotate(cam.view_mat, -float(event.motion.yrel), glm::vec3(0, 0, 1));
+            		cam.view_mat = glm::rotate(cam.view_mat, -float(event.motion.yrel), glm::vec3(1, 0, 0));
             	}
                 break;
             case SDL_MOUSEWHEEL:
@@ -75,12 +75,14 @@ void render() {
 	mat_plastic_blue.diffuse_color = glm::vec4(0.2f, 1.0f, 0.2f, 1.0f);
 	mat_plastic_blue.emissive_color = glm::vec4(0.f, 0.f, 0.f, 0.f);
 	mat_plastic_blue.specular_color = glm::vec4(1.f, 1.f, 1.f, 1.f);
+	mat_plastic_blue.shininess = 10;
 
 	thrender::render_context ctx(cam, gbuff);
 	thrender::shaders::gouraud_vx_shader vx_shader;
 	vx_shader.light.position_ws = glm::vec4(10.f, 10.f, 0.f, 1.f);
 	vx_shader.light.diffuse_color = glm::vec4(.8f, .8f, .8f, 1.f);
-	vx_shader.vCameraPos_ws = glm::vec4(ctx.cam.position(), 1.f);
+	vx_shader.light.specular_color = glm::vec4(.8f, .8f, .8f, 1.f);
+
 	vx_shader.material = mat_plastic_blue;
 	thrender::shaders::gouraud_fg_shader fg_shader;
 	thrender::pipeline<mesh_type, thrender::shaders::gouraud_vx_shader, thrender::shaders::gouraud_fg_shader> pp(vx_shader, fg_shader);
@@ -95,6 +97,7 @@ void render() {
 			vx_shader.mProjection = ctx.cam.projection_mat;
 			vx_shader.mView = ctx.cam.view_mat;
 			vx_shader.mModel = glm::mat4(1.0f);
+			vx_shader.vCameraPos_ws = glm::vec4(ctx.cam.position(), 1.f);
 			gbuff.clear_all();
 		}
 		{	PROFILE_BLOCK(prof, "Render cube");
@@ -113,7 +116,7 @@ void render() {
 		std::cout << prof.report() << std::endl;
 
 		process_events();
-		glm::quat rot = glm::angleAxis(10.0f, glm::vec3(1.0f, .0f, .0f));
+		glm::quat rot = glm::angleAxis(2.0f, glm::vec3(1.0f, .0f, .0f));
 		vx_shader.light.position_ws = glm::normalize(glm::rotate(rot, vx_shader.light.position_ws));
 		//lock_fps.keep_frame_rate();
 	}

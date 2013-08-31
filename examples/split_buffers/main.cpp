@@ -27,7 +27,7 @@ thrender::window * window;
 thrender::texture * tex_diffuse;
 thrender::texture * tex_depth;
 thrender::texture * tex_normals;
-thrender::camera cam(glm::vec3(0, 0, 10), 45, 4.0f / 3.0f, 5, 50);
+thrender::camera cam(glm::vec3(0, 0, -10), 45, 4.0f / 3.0f, 5, 50);
 
 void upload_images(thrender::framebuffer_array & fb) {
 
@@ -75,13 +75,13 @@ void render() {
 			glm::vec4,
 			glm::vec4,
 			glm::vec2> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/monkey_500k.stl");
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/cube.ply");
 	std::cout << thrender::utils::to_string(tux) << std::endl;
 
 	thrender::render_context ctx(cam, gbuff);
-	thrender::shaders::default_vertex_shader vx_shader;
-	thrender::shaders::default_fragment_shader fg_shader;
-	thrender::pipeline<mesh_type,thrender::shaders::default_vertex_shader, thrender::shaders::default_fragment_shader> pp(vx_shader, fg_shader);
+	thrender::shaders::default_vx_shader vx_shader;
+	thrender::shaders::default_fg_shader fg_shader;
+	thrender::pipeline<mesh_type,thrender::shaders::default_vx_shader, thrender::shaders::default_fg_shader> pp(vx_shader, fg_shader);
 	vx_shader.mvp_mat = ctx.cam.projection_mat * ctx.cam.view_mat;
 
 

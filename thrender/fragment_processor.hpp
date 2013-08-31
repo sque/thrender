@@ -116,8 +116,8 @@ namespace thrender {
 			}
 
 			// Face-culling
-			if (!tr.is_ccw_winding_order())
-				return;
+			//if (!tr.is_ccw_winding_order())
+			//	return;
 
 			// Sort points by y
 			const glm::vec4 * pord[3] = {tr.positions[0], tr.positions[1], tr.positions[2]};
@@ -129,7 +129,8 @@ namespace thrender {
 			glm::vec4 bounding_box = tr.bounding_box();
 			if (bounding_box[3] < 1.0f && bounding_box[2] < 1.0f) {
 				fgcontrol.set_coords(tr.positions[0]->x, tr.positions[1]->y);
-				if (context.fb.depth_buffer()[fgcontrol.framebuffer_y][fgcontrol.framebuffer_x] > tr.positions[0]->z)	// Z-test
+				// Z-test
+				if (context.fb.depth_buffer()[fgcontrol.framebuffer_y][fgcontrol.framebuffer_x] > tr.positions[0]->z)
 					return;
 				context.fb.depth_buffer()[fgcontrol.framebuffer_y][fgcontrol.framebuffer_x] = tr.positions[0]->z;
 				shader(context.fb, fgcontrol);
@@ -153,7 +154,8 @@ namespace thrender {
 				for (window_size_t x = tri_contour.leftmost[y]; x < tri_contour.rightmost[y]; x++) {
 					fgcontrol.set_coords(x,y);
 					float z = fgcontrol.template interpolate<0, glm::vec4>().z;
-					if (context.fb.depth_buffer()[y][x] > z)	// Z-test
+					// Z-test
+					if (context.fb.depth_buffer()[y][x] > z)
 						continue;
 					context.fb.depth_buffer()[y][x] = z;
 					shader(context.fb, fgcontrol);
