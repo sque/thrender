@@ -81,36 +81,6 @@ namespace thrender {
 		}
 	};
 
-
-namespace shaders {
-
-	//! Default vertex shader
-	/**
-	 * Default shaders process vertices and projects them
-	 * in 3D space based on ModelViewProjection matrix.
-	 */
-	struct default_vertex_shader {
-
-		//! Model view projection matrix
-		glm::mat4 mvp_mat;
-
-		template<class RenderableType>
-		void operator()(const typename RenderableType::vertex_type & vin, typename RenderableType::vertex_type & vout, vertex_processing_control<RenderableType> & vcontrol){
-			const glm::vec4 & posIn = VA_ATTRIBUTE(vin, POSITION);
-			glm::vec4 & posOut = VA_ATTRIBUTE(vout, POSITION);
-
-			posOut = mvp_mat * posIn;
-			// clip coordinates
-
-			vcontrol.translate_to_window_space(posOut);
-			// translate to window space
-
-			vcontrol.viewport_clip(posOut);
-		}
-	};
-}
-
-
 	//! Kernel for processing vertices
 	/**
 	 * Unwraps vertex parameters to the vertex shaders API

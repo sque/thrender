@@ -20,7 +20,6 @@
 #include "thrender/utils/to_string.hpp"
 #include "thrender/utils/frame_rate_keeper.hpp"
 #include "thrender/utils/profiler.hpp"
-#include "thrender/pipeline.hpp"
 #include "thrender/exp/gui.hpp"
 
 thrender::window * window;
@@ -59,61 +58,6 @@ void process_events() {
     }
 }
 
-struct light_base {
-
-	//! Diffuse color of the light
-	thrender::color_pixel_t diffuse_color;
-
-	//! Specular color of the light
-	thrender::color_pixel_t specular_color;
-
-	//! Position of the light in world space
-	glm::vec4 position_ws;
-};
-
-//! Implementation of a Gouraud shading (per vertex)
-struct gouraud_vx_shader {
-
-	//! Model transformation matrix
-	glm::mat4 mModel;
-
-	//! View transformation matrix
-	glm::mat4 mView;
-
-	//! Projection transformation matrix
-	glm::mat4 mProjection;
-
-	//! Camera position in world space
-	glm::vec4 vCameraPos_ws;
-
-	//! The light
-	light_base light;
-
-	template<class RenderableType>
-	void operator()(const typename RenderableType::vertex_type & vin, typename RenderableType::vertex_type & vout, thrender::vertex_processing_control<RenderableType> & vcontrol){
-		const glm::vec4 & posIn = VA_ATTRIBUTE(vin, thrender::POSITION);
-		glm::vec4 & posOut = VA_ATTRIBUTE(vout, thrender::POSITION);
-		const glm::vec4 & normIn = VA_ATTRIBUTE(vin, thrender::NORMAL);
-
-		posOut = glm::normalize(mProjection * mView * mModel * posIn);
-		vcontrol.translate_to_window_space(posOut);
-		vcontrol.viewport_clip(posOut);
-
-		glm::vec4 vNormal_ws = glm::normalize(mModel * normIn);
-		glm::vec4 vPos_ws = glm::normalize(mModel * posIn);
-		glm::vec4 vLightDirection = glm::normalize(vPos_ws - light.position_ws);
-		float fDiffuseIntensity = glm::max(0.0f, glm::dot( vNormal_ws, vLightDirection ));
-		VA_ATTRIBUTE(vout, thrender::COLOR) = glm::vec4(fDiffuseIntensity, fDiffuseIntensity, fDiffuseIntensity, 1.0f);
-	}
-};
-
-struct phong_fg_shader {
-
-	template<class RenderableType>
-	void operator()(thrender::framebuffer_array & fb, const thrender::fragment_processing_control<RenderableType> & api) {
-		//PIXEL(fb.color())
-	}
-};
 void render() {
 
 	thrender::framebuffer_array gbuff(640, 480);
@@ -127,12 +71,19 @@ void render() {
 	mesh_type cube = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/cube.ply");
 	std::cout << thrender::utils::to_string(tux) << std::endl;
 
+	thrender::shaders::phong_material mat_plastic_blue;
+	mat_plastic_blue.diffuse_color = glm::vec4(0.2f, 1.0f, 0.2f, 1.0f);
+	mat_plastic_blue.emissive_color = glm::vec4(0.f, 0.f, 0.f, 0.f);
+	mat_plastic_blue.specular_color = glm::vec4(1.f, 1.f, 1.f, 1.f);
+
 	thrender::render_context ctx(cam, gbuff);
-	gouraud_vx_shader vx_shader;
+	thrender::shaders::gouraud_vx_shader vx_shader;
 	vx_shader.light.position_ws = glm::vec4(10.f, 10.f, 0.f, 1.f);
+	vx_shader.light.diffuse_color = glm::vec4(.8f, .8f, .8f, 1.f);
 	vx_shader.vCameraPos_ws = glm::vec4(ctx.cam.position(), 1.f);
-	thrender::shaders::default_fragment_shader fg_shader;
-	thrender::pipeline<mesh_type, gouraud_vx_shader, thrender::shaders::default_fragment_shader> pp(vx_shader, fg_shader);
+	vx_shader.material = mat_plastic_blue;
+	thrender::shaders::gouraud_fg_shader fg_shader;
+	thrender::pipeline<mesh_type, thrender::shaders::gouraud_vx_shader, thrender::shaders::gouraud_fg_shader> pp(vx_shader, fg_shader);
 
 
 
@@ -151,8 +102,7 @@ void render() {
 		}
 		{	PROFILE_BLOCK(prof, "Render tux");
 			glm::mat4 model_mat(1.0f);
-			model_mat = glm::translate(model_mat, glm::vec3(0,0,0.5));
-			model_mat = glm::rotate(model_mat, 45.0f, glm::vec3(1.0f,1.0f,.0f));
+			model_mat = glm::rotate(model_mat, 90.0f, glm::vec3(1.0f,.0f,.0f));
 			vx_shader.mModel = model_mat;
 			pp.draw(tux, ctx);
 		}

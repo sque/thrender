@@ -74,25 +74,7 @@ namespace thrender {
 		fragment_processing_control& operator=(const fragment_processing_control&) = delete;
 	};
 
-//! Macro to query a vertex attribute, interpolated
-#define INTERPOLATE(attribute) \
-		api.template interpolate<attribute, \
-			typename thrust::tuple_element<attribute, \
-				typename std::remove_reference<decltype(api.object)>::type::vertex_type>::type>()
 
-#define FB_PIXEL(buffer) \
-	buffer[api.framebuffer_y][api.framebuffer_x]
-
-namespace shaders {
-
-	struct default_fragment_shader {
-
-		template<class RenderableType>
-		void operator()(framebuffer_array & fb, const fragment_processing_control<RenderableType> & api) {
-			FB_PIXEL(fb.color_buffer()) = INTERPOLATE(COLOR);
-		}
-	};
-}
 	template<class FragmentShader, class RenderableType>
 	struct fragment_processor_kernel {
 
