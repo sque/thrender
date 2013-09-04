@@ -2,7 +2,7 @@
 
 #include <SDL.h>
 #include <sstream>
-#include "thrender/framebuffer.hpp"
+#include "../framebuffer.hpp"
 
 
 namespace thrender {

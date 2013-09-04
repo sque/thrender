@@ -67,8 +67,8 @@ void render() {
 			glm::vec4,
 			glm::vec4,
 			glm::vec2> > mesh_type;
-	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/tux__.ply");
-	mesh_type cube = thrender::utils::load_model<mesh_type>("/home/sque/Downloads/cube.ply");
+	mesh_type tux = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/tux__.ply");
+	mesh_type cube = thrender::utils::load_model<mesh_type>("/home/kpal/Downloads/cube.ply");
 	std::cout << thrender::utils::to_string(tux) << std::endl;
 
 	thrender::shaders::phong_material mat_plastic_blue;
